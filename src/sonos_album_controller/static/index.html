@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sonos Album Controller</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <main class="shell">
+        <section class="status-panel" aria-labelledby="app-title">
+            <p class="eyebrow">Lokalny kontroler Sonos Era 300</p>
+            <h1 id="app-title">Sonos Album Controller</h1>
+            <p id="status-message" class="status-message">Ladowanie statusu aplikacji...</p>
+            <dl class="status-grid">
+                <div>
+                    <dt>Backend</dt>
+                    <dd id="backend-status">-</dd>
+                </div>
+                <div>
+                    <dt>Integracja Sonos</dt>
+                    <dd id="sonos-status">-</dd>
+                </div>
+            </dl>
+        </section>
+    </main>
+    <script src="/static/app.js"></script>
+</body>
+</html>

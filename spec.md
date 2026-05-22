@@ -107,6 +107,11 @@ Miejsca wymagające walidacji lub smoke testów:
 - Konsekwencje: Logika domenowa, cache i endpointy powinny być testowalne przez mocki/stuby; pełna integracja z Sonosem pozostaje walidacją lokalną, nie domyślnym testem CI.
 - Dotyczy PRD / milestone’u: PRD 13, AGENTS.md; wszystkie milestone’y.
 
+- Decyzja: Testy HTTP dla FastAPI korzystają z `httpx` przez `fastapi.testclient` jako zależności developerskiej.
+- Uzasadnienie: Milestone 0.5 wymaga smoke testu klienta HTTP bez realnego Sonosa i bez zewnętrznego IO.
+- Konsekwencje: `httpx` jest używany tylko w walidacji lokalnej, a aplikacja runtime pozostaje oparta o FastAPI i uvicorn.
+- Dotyczy PRD / milestone’u: Milestone 0.5.
+
 TODO: Ustalić nazwę zmiennej środowiskowej dla IP głośnika, np. `SONOS_SPEAKER_IP`.
 
 TODO: Ustalić dokładną lokalizację pliku cache i pliku logów w projekcie lub katalogu danych użytkownika.

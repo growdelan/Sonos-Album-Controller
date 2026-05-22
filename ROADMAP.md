@@ -24,7 +24,7 @@ Milestone można oznaczyć jako `done` dopiero, gdy:
 
 ---
 
-## Milestone 0.5: Minimal end-to-end slice (planned)
+## Milestone 0.5: Minimal end-to-end slice (done)
 
 Cel:
 - uruchomić minimalną lokalną aplikację webową z backendem Python i statycznym frontendem
@@ -62,7 +62,7 @@ Walidacja:
 - otwarcie lokalnej strony i potwierdzenie, że UI renderuje minimalny stan
 
 Kontrakt sprintu:
-- utworzony przed implementacją: nie
+- utworzony przed implementacją: tak
 - najważniejsze walidacje: test smoke HTTP, ręczne uruchomienie aplikacji
 - stop conditions: brak możliwości uruchomienia aplikacji przez `uv` lub niejasna komenda startowa
 
