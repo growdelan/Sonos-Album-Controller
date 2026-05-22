@@ -11,10 +11,10 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Aktualny milestone / batch
 
-- Aktualny milestone: Milestone 0.5: Minimal end-to-end slice
-- Status: zakończone, pozytywny self-review, gotowe do Milestone 1 po zapisie zmian w repo
+- Aktualny milestone: Milestone 1: PoC integracji Sonos / SoCo
+- Status: zakończone, pozytywny self-review po poprawkach, gotowe do commita i pusha
 - Kontrakt sprintu: utworzony przed implementacją w odpowiedzi agenta; profil `openai_patch`, format patch/diff przez `apply_patch`
-- Zakres poza bieżącą pracą: integracja z SoCo/Sonos, pobieranie Favorites, cache albumów, sterowanie odtwarzaniem, docelowy wygląd UI
+- Zakres poza bieżącą pracą: pełny frontend albumów, trwały cache produkcyjny, pełne API MVP, polerowanie UI, automatyczne testy wymagające prawdziwego głośnika
 
 ## Co działa
 
@@ -22,19 +22,24 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 - Istnieje roadmapa rozbita na Milestone 0.5 oraz milestone’y 1-8, z walidacjami i stop conditions.
 - Minimalna aplikacja FastAPI serwuje statyczny frontend i endpoint `/api/status`.
 - Test smoke HTTP potwierdza odpowiedź endpointu statusu i serwowanie frontendu.
+- Istnieje izolowany PoC SoCo uruchamiany lokalnie z `SONOS_SPEAKER_IP`, z kontrolowanym stanem `not_configured` bez IP.
+- Testy jednostkowe pokrywają normalizację Favorites i raport PoC przez fake adapter bez zewnętrznego IO.
 
 ## Co jest skończone
 
 - `spec.md` został wypełniony na podstawie `prd/000-initial-prd.md`.
 - `ROADMAP.md` został wypełniony na podstawie `prd/000-initial-prd.md`.
 - Milestone 0.5 został zaimplementowany w zakresie minimalnego end-to-end slice.
+- Milestone 1 został zaimplementowany jako PoC SoCo, z walidacją automatyczną, ręcznym testem na realnym Sonos Era 300 i udokumentowanymi ograniczeniami.
 
 ## Co jest w trakcie
 
+
 ## Co jest następne
 
-- Rozpocząć Milestone 1: PoC integracji Sonos / SoCo po przygotowaniu osobnego kontraktu sprintu.
-- Przed milestone’ami integracyjnymi doprecyzować TODO ze `spec.md`: nazwę zmiennej IP oraz lokalizację cache/logów.
+- Rozpocząć Milestone 2: Konfiguracja, diagnostyka i obsługa błędów połączenia.
+- Przed Milestone 2 doprecyzować lokalizację pliku logów.
+- Przed milestone’ami zależnymi od list utworów rozstrzygnąć ograniczenie `album_track_expansion=0` dla Favorites Apple Music.
 
 ## Walidacja
 
@@ -44,6 +49,9 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-22 | Milestone 0.5 smoke test | `uv run python -m unittest discover -s tests -p "test_*.py"` | PASS | 2 testy klienta HTTP bez realnego Sonosa. |
 | 2026-05-22 | Milestone 0.5 ręczny start | `uv run uvicorn sonos_album_controller.main:app --app-dir src --reload`; `curl -sS http://127.0.0.1:8000/api/status` | PASS | Endpoint zwrócił kontrolowany status `ready`. |
 | 2026-05-22 | Milestone 0.5 render UI | Browser na `http://127.0.0.1:8000` | PASS | Strona pokazała tytuł, status backendu `ready` i integrację Sonos `not_configured`. |
+| 2026-05-22 | Milestone 1 testy PoC bez IO | `uv run python -m unittest discover -s tests -p "test_*.py"` | PASS | 6 testów; fake speaker i fake MusicLibrary bez realnego Sonosa. |
+| 2026-05-22 | Milestone 1 CLI bez konfiguracji | `PYTHONPATH=src uv run python -m sonos_album_controller.sonos_poc --favorites-limit 1` | PASS | Zwrócił kontrolowany raport `not_configured` i kod wyjścia 2, bez próby połączenia. |
+| 2026-05-22 | Milestone 1 PoC z realnym Sonos Era 300 | `SONOS_SPEAKER_IP=192.168.0.172 PYTHONPATH=src uv run python -m sonos_album_controller.sonos_poc --favorites-limit 20` | PARTIAL | Połączono z `Biuro Era`, model `Sonos Era 300`; pobrano 69 Favorites i wykryto 19 unikalnych kandydatów na albumy; metody kolejki/sterowania/głośności dostępne; próba rozwinięcia pierwszego albumu zwróciła 0 elementów; jakość audio wymaga fallbacku `Jakość niedostępna`. |
 
 ## Review
 
@@ -51,6 +59,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 |---|---|---|---|---|
 | 2026-05-22 | Self-check spójności `spec.md` i `ROADMAP.md` względem PRD | PASS | brak | Commit i push zmian dokumentacyjnych. |
 | 2026-05-22 | Self-review Milestone 0.5 | PASS | brak | Finalizacja operacyjna, commit i push. |
+| 2026-05-22 | Self-review Milestone 1 po poprawkach | PASS | brak | Finalizacja operacyjna, commit i push. |
 
 ## Błędy narzędzi i odzyskiwanie
 
@@ -68,18 +77,19 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 |---|---|---|---|---|
 | 2026-05-22 | Bazowa specyfikacja i roadmapa z PRD | `spec.md`, `ROADMAP.md`, `STATUS.md` | baseline | Do oceny po implementacji Milestone 0.5 i pierwszym review. |
 | 2026-05-22 | Milestone 0.5 minimal end-to-end slice | `src/`, `tests/`, `README.md`, `pyproject.toml`, `uv.lock`, `spec.md`, `ROADMAP.md`, `STATUS.md` | 100% po self-review, bez poprawek krytycznych | Minimalny zakres i test smoke przetrwały review bez zmian. |
+| 2026-05-22 | Milestone 1 PoC integracji SoCo | `src/`, `tests/`, `README.md`, `pyproject.toml`, `uv.lock`, `spec.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review | Poprawki zawęziły status PoC do `partial` dla niepotwierdzonych zdolności i zachowały izolowany zakres milestone’u. |
 
 ## Blokery i ryzyka
 
-- Ryzyko integracyjne SoCo/Sonos pozostaje nierozstrzygnięte do Milestone 1 PoC.
-- Do doprecyzowania przed implementacją: nazwa zmiennej środowiskowej IP oraz lokalizacja cache/logów.
+- Ryzyko integracyjne SoCo/Sonos częściowo zmniejszone: PoC łączy się z realnym Sonos Era 300 i pobiera Favorites, ale rozwinięcie albumu do listy utworów oraz jakość audio pozostają niepotwierdzone.
+- Lokalizacja cache/logów pozostaje do doprecyzowania przed Milestone 2/4.
 
 ## Handoff do następnej sesji
 
-- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, statyczny frontend i smoke test HTTP.
-- Decyzje, których nie wolno zgubić: FastAPI + SoCo, statyczny frontend HTML/CSS/vanilla JS, jeden Sonos Era 300 po stałym IP, jakość audio best effort, testy automatyczne bez realnego Sonosa.
+- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, a Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON.
+- Decyzje, których nie wolno zgubić: FastAPI + SoCo, statyczny frontend HTML/CSS/vanilla JS, jeden Sonos Era 300 po stałym IP z `SONOS_SPEAKER_IP`, jakość audio best effort, testy automatyczne bez realnego Sonosa.
 - Pliki, które warto doczytać jako pierwsze: `AGENTS.md`, `STATUS.md`, `spec.md`, `ROADMAP.md`, `prd/000-initial-prd.md`.
-- Następny bezpieczny krok: przygotować kontrakt sprintu dla Milestone 1 i wykonać PoC integracji Sonos / SoCo.
+- Następny bezpieczny krok: rozpocząć Milestone 2 po ustaleniu lokalizacji logów; ograniczenie `album_track_expansion=0` przenieść jako decyzję przed milestone’ami list utworów.
 - Czego nie robić: nie zaczynać pełnej integracji z Sonosem przed PoC z Milestone 1; nie dodawać zależności frontendowych bez potrzeby.
 
 ## Ostatnie aktualizacje
@@ -87,3 +97,6 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-22: Wypełniono `spec.md` i `ROADMAP.md` na podstawie `prd/000-initial-prd.md`; przygotowano status operacyjny do commita.
 - 2026-05-22: Zaimplementowano Milestone 0.5: minimalny backend FastAPI, statyczny frontend, endpoint `/api/status`, smoke test HTTP i README z komendą uruchomienia.
 - 2026-05-22: Self-review Milestone 0.5 zakończony bez problemów krytycznych; oznaczono milestone jako gotowy do commita.
+- 2026-05-22: Zaimplementowano Milestone 1 PoC: zależność `soco`, konfiguracja `SONOS_SPEAKER_IP`, raport JSON, testy normalizacji bez IO i dokumentacja uruchomienia.
+- 2026-05-22: Po self-review Milestone 1 poprawiono status `partial`, wykrywanie albumów z zasobów `DidlFavorite`, test scenariusza `album_track_expansion=0` i dokumentację ograniczenia PoC.
+- 2026-05-22: Self-review Milestone 1 po poprawkach zakończony bez problemów krytycznych; oznaczono milestone jako gotowy do finalizacji.

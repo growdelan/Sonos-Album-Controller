@@ -79,7 +79,7 @@ Miejsca wymagające walidacji lub smoke testów:
 
 - Decyzja: Integracja z Sonos będzie realizowana przez SoCo jako podstawową bibliotekę lokalnego sterowania.
 - Uzasadnienie: PRD wyklucza oficjalne Sonos Control API i OAuth w MVP oraz wskazuje SoCo jako rekomendowaną integrację lokalną.
-- Konsekwencje: Dostępność Favorites, rozwijanie albumów Apple Music, tryby pętli i jakość audio muszą zostać potwierdzone w PoC przed pełną implementacją MVP.
+- Konsekwencje: Projekt ma zależność runtime `soco`; dostępność Favorites, rozwijanie albumów Apple Music, tryby pętli i jakość audio muszą zostać potwierdzone w PoC przed pełną implementacją MVP.
 - Dotyczy PRD / milestone’u: PRD 4.2, 12, 13; Milestone 1.
 
 - Decyzja: Frontend MVP będzie statycznym HTML + CSS + vanilla JavaScript bez zależności frontendowych, jeśli zakres nie wymusi inaczej.
@@ -112,7 +112,10 @@ Miejsca wymagające walidacji lub smoke testów:
 - Konsekwencje: `httpx` jest używany tylko w walidacji lokalnej, a aplikacja runtime pozostaje oparta o FastAPI i uvicorn.
 - Dotyczy PRD / milestone’u: Milestone 0.5.
 
-TODO: Ustalić nazwę zmiennej środowiskowej dla IP głośnika, np. `SONOS_SPEAKER_IP`.
+- Decyzja: Stały adres IP głośnika jest odczytywany ze zmiennej środowiskowej `SONOS_SPEAKER_IP`.
+- Uzasadnienie: Milestone 1 wymaga lokalnej konfiguracji IP bez sekretów w repo i bez automatycznego wykrywania wielu głośników.
+- Konsekwencje: Brak zmiennej skutkuje kontrolowanym stanem `not_configured`; komendy PoC i diagnostyki muszą dokumentować tę zmienną.
+- Dotyczy PRD / milestone’u: PRD 4.1, 9, 12.6; Milestone 1, Milestone 2.
 
 TODO: Ustalić dokładną lokalizację pliku cache i pliku logów w projekcie lub katalogu danych użytkownika.
 

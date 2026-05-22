@@ -71,7 +71,7 @@ Uwagi:
 
 ---
 
-## Milestone 1: PoC integracji Sonos / SoCo (planned)
+## Milestone 1: PoC integracji Sonos / SoCo (done)
 
 Cel:
 - potwierdzić techniczną wykonalność krytycznych operacji SoCo dla jednego Sonos Era 300 po stałym IP
@@ -112,6 +112,7 @@ Kontrakt sprintu:
 
 Uwagi:
 - milestone wysokiego ryzyka; wymaga osobnego kontraktu sprintu i review przed finalizacją
+- PoC potwierdził połączenie z realnym Sonos Era 300, pobieranie Favorites, wykrywanie albumów oraz dostępność metod SoCo dla kolejki, sterowania, pętli, głośności i mute. Próba rozwinięcia albumu Apple Music z Favorites zwróciła 0 elementów, więc kolejne milestone’y zależne od list utworów muszą uwzględnić osobną decyzję albo alternatywną ścieżkę pobierania utworów. Jakość audio wymaga fallbacku `Jakość niedostępna`.
 
 ---
 
