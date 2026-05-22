@@ -22,6 +22,31 @@
                     <dd id="sonos-status">-</dd>
                 </div>
             </dl>
+            <div class="actions">
+                <button id="diagnostics-button" type="button">Diagnostyka</button>
+                <button id="connection-test-button" type="button">Testuj polaczenie z Sonos</button>
+            </div>
+            <section class="diagnostics-panel" aria-labelledby="diagnostics-title">
+                <h2 id="diagnostics-title">Diagnostyka</h2>
+                <dl class="diagnostics-grid">
+                    <div>
+                        <dt>IP glosnika</dt>
+                        <dd id="diagnostics-ip">-</dd>
+                    </div>
+                    <div>
+                        <dt>Status polaczenia</dt>
+                        <dd id="diagnostics-connection">-</dd>
+                    </div>
+                    <div>
+                        <dt>Cache</dt>
+                        <dd id="diagnostics-cache">-</dd>
+                    </div>
+                    <div>
+                        <dt>Ostatni blad</dt>
+                        <dd id="diagnostics-error">-</dd>
+                    </div>
+                </dl>
+            </section>
         </section>
     </main>
     <script src="/static/app.js"></script>

@@ -74,6 +74,52 @@ dd {
     font-weight: 700;
 }
 
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+button {
+    border: 1px solid #234357;
+    border-radius: 8px;
+    background: #234357;
+    color: #ffffff;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    padding: 10px 14px;
+}
+
+button:hover {
+    background: #172f3f;
+}
+
+.diagnostics-panel {
+    border-top: 1px solid #e2e7ed;
+    margin-top: 28px;
+    padding-top: 24px;
+}
+
+h2 {
+    margin: 0 0 16px;
+    font-size: 1.25rem;
+}
+
+.diagnostics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin: 0;
+}
+
+.diagnostics-grid div {
+    border: 1px solid #e2e7ed;
+    border-radius: 8px;
+    padding: 16px;
+}
+
 @media (max-width: 640px) {
     .shell {
         width: min(100% - 24px, 920px);
@@ -85,6 +131,10 @@ dd {
     }
 
     .status-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .diagnostics-grid {
         grid-template-columns: 1fr;
     }
 }

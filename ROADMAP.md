@@ -116,7 +116,7 @@ Uwagi:
 
 ---
 
-## Milestone 2: Konfiguracja, diagnostyka i obsługa błędów połączenia (planned)
+## Milestone 2: Konfiguracja, diagnostyka i obsługa błędów połączenia (done)
 
 Cel:
 - zbudować stabilną warstwę konfiguracji i diagnostyki dla jednego głośnika Sonos Era 300
@@ -153,7 +153,9 @@ Kontrakt sprintu:
 - stop conditions: nieustalona nazwa zmiennej IP lub niejasna lokalizacja logów
 
 Uwagi:
-- przed startem doprecyzować TODO ze `spec.md` dotyczące nazwy zmiennej IP i lokalizacji logów
+- nazwa zmiennej IP to `SONOS_SPEAKER_IP`
+- lokalizacja logów to `~/.sonos-album-controller/logs/app.log`, z możliwością nadpisania przez `SONOS_LOG_PATH`
+- milestone zakończony po poprawce loggera i pozytywnym self-review
 
 ---
 

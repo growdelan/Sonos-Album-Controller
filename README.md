@@ -21,6 +21,18 @@ PYTHONPATH=src uv run python -m sonos_album_controller.sonos_poc
 
 Bez `SONOS_SPEAKER_IP` komenda zwraca raport `not_configured`, bez próby połączenia z realnym Sonosem.
 
+## Konfiguracja i diagnostyka
+
+Aplikacja używa tych opcjonalnych zmiennych środowiskowych:
+
+- `SONOS_SPEAKER_IP` - stały adres IP głośnika Sonos Era 300.
+- `SONOS_LOG_PATH` - ścieżka pliku logów; domyślnie `~/.sonos-album-controller/logs/app.log`.
+
+Endpointy diagnostyczne:
+
+- `GET /api/diagnostics` - zwraca skonfigurowane IP, status połączenia, ostatni błąd i stan cache.
+- `POST /api/diagnostics/test-connection` - wykonuje test połączenia z Sonosem.
+
 ## Testy
 
 ```bash

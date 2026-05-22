@@ -1,0 +1,120 @@
+import logging
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Callable
+
+from soco import SoCo
+
+from sonos_album_controller.config import AppConfig, SONOS_SPEAKER_IP_ENV
+
+
+SpeakerFactory = Callable[[str], Any]
+
+
+@dataclass(frozen=True)
+class CacheDiagnostics:
+    available: bool
+    last_refresh: str | None
+    status: str
+
+
+@dataclass(frozen=True)
+class DiagnosticsReport:
+    configured_ip: str | None
+    connection_status: str
+    last_error: str | None
+    cache: CacheDiagnostics
+    log_path: str
+
+
+def _get_logger(log_path: Path) -> logging.Logger:
+    logger = logging.getLogger("sonos_album_controller")
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+    target = str(log_path)
+    for handler in list(logger.handlers):
+        if isinstance(handler, logging.FileHandler) and handler.baseFilename == target:
+            return logger
+        logger.removeHandler(handler)
+        handler.close()
+
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    handler = logging.FileHandler(log_path, encoding="utf-8")
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    logger.addHandler(handler)
+    return logger
+
+
+def _empty_cache_status() -> CacheDiagnostics:
+    return CacheDiagnostics(
+        available=False,
+        last_refresh=None,
+        status="not_implemented",
+    )
+
+
+def build_diagnostics(config: AppConfig) -> DiagnosticsReport:
+    logger = _get_logger(config.log_path)
+    if config.sonos_speaker_ip is None:
+        message = f"Brak konfiguracji IP glosnika. Ustaw {SONOS_SPEAKER_IP_ENV}."
+        logger.warning(message)
+        return DiagnosticsReport(
+            configured_ip=None,
+            connection_status="not_configured",
+            last_error=message,
+            cache=_empty_cache_status(),
+            log_path=str(config.log_path),
+        )
+
+    return DiagnosticsReport(
+        configured_ip=config.sonos_speaker_ip,
+        connection_status="configured",
+        last_error=None,
+        cache=_empty_cache_status(),
+        log_path=str(config.log_path),
+    )
+
+
+def test_sonos_connection(
+    config: AppConfig,
+    speaker_factory: SpeakerFactory = SoCo,
+) -> DiagnosticsReport:
+    logger = _get_logger(config.log_path)
+    if config.sonos_speaker_ip is None:
+        message = f"Nie mozna przetestowac polaczenia bez {SONOS_SPEAKER_IP_ENV}."
+        logger.warning(message)
+        return DiagnosticsReport(
+            configured_ip=None,
+            connection_status="not_configured",
+            last_error=message,
+            cache=_empty_cache_status(),
+            log_path=str(config.log_path),
+        )
+
+    try:
+        speaker = speaker_factory(config.sonos_speaker_ip)
+        speaker.get_speaker_info()
+    except Exception as error:
+        message = f"Nie udalo sie polaczyc z Sonos pod adresem {config.sonos_speaker_ip}: {error}"
+        logger.error(message)
+        return DiagnosticsReport(
+            configured_ip=config.sonos_speaker_ip,
+            connection_status="error",
+            last_error=message,
+            cache=_empty_cache_status(),
+            log_path=str(config.log_path),
+        )
+
+    return DiagnosticsReport(
+        configured_ip=config.sonos_speaker_ip,
+        connection_status="connected",
+        last_error=None,
+        cache=_empty_cache_status(),
+        log_path=str(config.log_path),
+    )
+
+
+def diagnostics_to_dict(report: DiagnosticsReport) -> dict[str, Any]:
+    return asdict(report)

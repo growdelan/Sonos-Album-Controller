@@ -1,0 +1,95 @@
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = PROJECT_ROOT / "src"
+sys.path.insert(0, str(SRC_DIR))
+
+from sonos_album_controller.config import SONOS_LOG_PATH_ENV, SONOS_SPEAKER_IP_ENV, AppConfig, load_config  # noqa: E402
+from sonos_album_controller.diagnostics import build_diagnostics, test_sonos_connection  # noqa: E402
+
+
+class FakeSpeaker:
+    def __init__(self, speaker_ip: str) -> None:
+        self.speaker_ip = speaker_ip
+
+    def get_speaker_info(self) -> dict[str, str]:
+        return {"zone_name": "Biuro", "model_name": "Sonos Era 300"}
+
+
+class FailingSpeaker:
+    def __init__(self, speaker_ip: str) -> None:
+        self.speaker_ip = speaker_ip
+
+    def get_speaker_info(self) -> dict[str, str]:
+        raise RuntimeError("connection refused")
+
+
+class DiagnosticsTest(unittest.TestCase):
+    def test_load_config_reads_speaker_ip_and_log_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "app.log"
+            with patch.dict(
+                "os.environ",
+                {
+                    SONOS_SPEAKER_IP_ENV: " 192.0.2.20 ",
+                    SONOS_LOG_PATH_ENV: str(log_path),
+                },
+                clear=True,
+            ):
+                config = load_config()
+
+        self.assertEqual(config.sonos_speaker_ip, "192.0.2.20")
+        self.assertEqual(config.log_path, log_path)
+
+    def test_diagnostics_without_ip_reports_not_configured_and_logs_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "app.log"
+            report = build_diagnostics(AppConfig(sonos_speaker_ip=None, log_path=log_path))
+
+            self.assertEqual(report.connection_status, "not_configured")
+            self.assertIn(SONOS_SPEAKER_IP_ENV, report.last_error or "")
+            self.assertTrue(log_path.exists())
+            self.assertIn("WARNING", log_path.read_text(encoding="utf-8"))
+
+    def test_connection_test_success_uses_injected_speaker_without_io(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = test_sonos_connection(
+                AppConfig(sonos_speaker_ip="192.0.2.20", log_path=Path(temp_dir) / "app.log"),
+                speaker_factory=FakeSpeaker,
+            )
+
+        self.assertEqual(report.connection_status, "connected")
+        self.assertIsNone(report.last_error)
+
+    def test_connection_test_error_is_reported_and_logged(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "app.log"
+            report = test_sonos_connection(
+                AppConfig(sonos_speaker_ip="192.0.2.20", log_path=log_path),
+                speaker_factory=FailingSpeaker,
+            )
+
+            self.assertEqual(report.connection_status, "error")
+            self.assertIn("connection refused", report.last_error or "")
+            self.assertIn("ERROR", log_path.read_text(encoding="utf-8"))
+
+    def test_logger_uses_only_current_log_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_log = Path(temp_dir) / "first.log"
+            second_log = Path(temp_dir) / "second.log"
+
+            build_diagnostics(AppConfig(sonos_speaker_ip=None, log_path=first_log))
+            first_log.write_text("", encoding="utf-8")
+            build_diagnostics(AppConfig(sonos_speaker_ip=None, log_path=second_log))
+
+            self.assertEqual(first_log.read_text(encoding="utf-8"), "")
+            self.assertIn("WARNING", second_log.read_text(encoding="utf-8"))
+
+
+if __name__ == "__main__":
+    unittest.main()
