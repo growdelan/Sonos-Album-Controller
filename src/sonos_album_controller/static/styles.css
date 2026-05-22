@@ -1,0 +1,90 @@
+:root {
+    color-scheme: light;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f4f6f8;
+    color: #17202a;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+}
+
+.shell {
+    width: min(920px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 56px 0;
+}
+
+.status-panel {
+    border: 1px solid #d8dee6;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 32px;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    color: #47606f;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+h1 {
+    margin: 0;
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    line-height: 1.05;
+}
+
+.status-message {
+    margin: 18px 0 28px;
+    max-width: 680px;
+    color: #304351;
+    font-size: 1.1rem;
+    line-height: 1.5;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin: 0;
+}
+
+.status-grid div {
+    border: 1px solid #e2e7ed;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+dt {
+    color: #526b7a;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+dd {
+    margin: 8px 0 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+@media (max-width: 640px) {
+    .shell {
+        width: min(100% - 24px, 920px);
+        padding: 24px 0;
+    }
+
+    .status-panel {
+        padding: 24px;
+    }
+
+    .status-grid {
+        grid-template-columns: 1fr;
+    }
+}
