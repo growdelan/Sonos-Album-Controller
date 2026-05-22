@@ -117,7 +117,12 @@ Miejsca wymagające walidacji lub smoke testów:
 - Konsekwencje: Brak zmiennej skutkuje kontrolowanym stanem `not_configured`; komendy PoC i diagnostyki muszą dokumentować tę zmienną.
 - Dotyczy PRD / milestone’u: PRD 4.1, 9, 12.6; Milestone 1, Milestone 2.
 
-TODO: Ustalić dokładną lokalizację pliku cache i pliku logów w projekcie lub katalogu danych użytkownika.
+- Decyzja: Błędy i ostrzeżenia diagnostyki są zapisywane do pliku logów pod ścieżką `~/.sonos-album-controller/logs/app.log`, z możliwością nadpisania przez `SONOS_LOG_PATH`.
+- Uzasadnienie: Milestone 2 wymaga lokalnego pliku logów, a domyślna ścieżka poza repo nie miesza danych runtime z kodem projektu.
+- Konsekwencje: Endpoint diagnostyczny zwraca efektywną ścieżkę logów; testy mogą używać tymczasowego `SONOS_LOG_PATH` bez zewnętrznego IO.
+- Dotyczy PRD / milestone’u: PRD 9, 11.3, 12.6; Milestone 2.
+
+TODO: Ustalić dokładną lokalizację pliku cache w projekcie lub katalogu danych użytkownika.
 
 ---
 

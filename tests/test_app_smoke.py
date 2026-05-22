@@ -1,6 +1,8 @@
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -9,6 +11,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
+from sonos_album_controller.config import SONOS_LOG_PATH_ENV, SONOS_SPEAKER_IP_ENV  # noqa: E402
+from sonos_album_controller.diagnostics import CacheDiagnostics, DiagnosticsReport  # noqa: E402
 from sonos_album_controller.main import app  # noqa: E402
 
 
@@ -17,11 +21,45 @@ class AppSmokeTest(unittest.TestCase):
         self.client = TestClient(app)
 
     def test_status_endpoint_returns_controlled_state(self) -> None:
-        response = self.client.get("/api/status")
+        with patch.dict("os.environ", {}, clear=True):
+            response = self.client.get("/api/status")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ready")
         self.assertEqual(response.json()["sonos_integration"], "not_configured")
+
+    def test_diagnostics_endpoint_returns_configuration_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.dict(
+                "os.environ",
+                {
+                    SONOS_SPEAKER_IP_ENV: "192.0.2.20",
+                    SONOS_LOG_PATH_ENV: str(Path(temp_dir) / "app.log"),
+                },
+                clear=True,
+            ):
+                response = self.client.get("/api/diagnostics")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["configured_ip"], "192.0.2.20")
+        self.assertEqual(body["connection_status"], "configured")
+        self.assertFalse(body["cache"]["available"])
+
+    def test_connection_test_endpoint_uses_diagnostic_service(self) -> None:
+        report = DiagnosticsReport(
+            configured_ip="192.0.2.20",
+            connection_status="connected",
+            last_error=None,
+            cache=CacheDiagnostics(available=False, last_refresh=None, status="not_implemented"),
+            log_path="/tmp/app.log",
+        )
+
+        with patch("sonos_album_controller.main.test_sonos_connection", return_value=report):
+            response = self.client.post("/api/diagnostics/test-connection")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["connection_status"], "connected")
 
     def test_frontend_is_served_from_backend(self) -> None:
         response = self.client.get("/")
