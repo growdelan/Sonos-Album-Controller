@@ -1,6 +1,7 @@
 const playerState = {
     album: null,
     tracks: [],
+    loadedQueueAlbumId: null,
     currentTrackIndex: null,
     isPlaying: false,
     lastActionStartedAt: null,
@@ -221,6 +222,7 @@ function setAlbumEnded() {
     playerState.lastActionStartedAt = null;
     stopProgressTimer();
     updatePlayPauseButton();
+    updateActiveTrack();
     setPlayerMessage("Koniec albumu");
     updateProgressDisplay(playerState.elapsedBeforePlay);
 }
@@ -269,8 +271,33 @@ function updateActiveTrack() {
     document.querySelectorAll("#tracks-list li").forEach((item) => {
         const index = Number(item.dataset.trackIndex);
         const isActive = index === playerState.currentTrackIndex;
+        const isPlaying = isActive && playerState.isPlaying;
+        const number = item.querySelector(".track-number");
         item.classList.toggle("active-track", isActive);
-        item.querySelector(".track-number").textContent = isActive ? "▶" : item.dataset.trackNumber;
+        item.classList.toggle("playing-track", isPlaying);
+        number.replaceChildren();
+        if (isPlaying) {
+            const indicator = document.createElement("span");
+            indicator.className = "track-playing-indicator";
+            indicator.setAttribute("aria-hidden", "true");
+            for (let index = 0; index < 3; index += 1) {
+                indicator.appendChild(document.createElement("span"));
+            }
+            number.appendChild(indicator);
+            return;
+        }
+        number.textContent = isActive ? "▶" : item.dataset.trackNumber;
+    });
+}
+
+function setTrackPending(trackIndex, pending) {
+    document.querySelectorAll("#tracks-list li").forEach((item) => {
+        const isPending = Number(item.dataset.trackIndex) === trackIndex && pending;
+        item.classList.toggle("pending-track", isPending);
+        const button = item.querySelector(".track-button");
+        if (button) {
+            button.disabled = isPending;
+        }
     });
 }
 
@@ -319,6 +346,7 @@ function applyReportTracks(report) {
 
 function resetPlayerState() {
     playerState.currentTrackIndex = null;
+    playerState.loadedQueueAlbumId = null;
     playerState.isPlaying = false;
     playerState.lastActionStartedAt = null;
     playerState.elapsedBeforePlay = 0;
@@ -432,7 +460,14 @@ function renderTracks(tracks, albumId) {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "track-button";
+        button.setAttribute("aria-label", `Odtworz: ${track.title}`);
         button.addEventListener("click", () => startTrack(albumId, index));
+        button.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                startTrack(albumId, index);
+            }
+        });
 
         const number = document.createElement("span");
         number.className = "track-number";
@@ -515,20 +550,29 @@ async function postJson(url, payload) {
 }
 
 async function startTrack(albumId, trackIndex) {
+    setTrackPending(trackIndex, true);
+    if (playerState.loadedQueueAlbumId === albumId && playerState.tracks.length > 0) {
+        await selectLoadedTrack(trackIndex);
+        return;
+    }
     setPlayerMessage("Ladowanie kolejki Sonosa...");
     try {
         const report = await postJson("/api/playback/start", { album_id: albumId, track_index: trackIndex });
         applyReportTracks(report);
         if (report.state && report.state.track) {
             const nextIndex = Number.isInteger(report.state.track_index) ? report.state.track_index : trackIndex;
+            playerState.loadedQueueAlbumId = albumId;
             setCurrentTrack(nextIndex, report.state.is_playing);
             return;
         }
         if (report.state && report.state.album) {
+            playerState.loadedQueueAlbumId = albumId;
             setWholeAlbumPlayback(report.state.album, report.state.track_index, report.state.is_playing);
         }
     } catch (error) {
         setPlayerMessage(error.message || "Nie udalo sie uruchomic utworu.");
+    } finally {
+        setTrackPending(trackIndex, false);
     }
 }
 
@@ -539,16 +583,41 @@ async function startAlbum(albumId) {
         applyReportTracks(report);
         if (report.state && report.state.track) {
             const nextIndex = Number.isInteger(report.state.track_index) ? report.state.track_index : 0;
+            playerState.loadedQueueAlbumId = albumId;
             setCurrentTrack(nextIndex, report.state.is_playing);
             return;
         }
         if (report.state && report.state.album) {
+            playerState.loadedQueueAlbumId = albumId;
             setWholeAlbumPlayback(report.state.album, report.state.track_index, report.state.is_playing);
             return;
         }
         setPlayerMessage("Album zostal uruchomiony.");
     } catch (error) {
         setPlayerMessage(error.message || "Nie udalo sie uruchomic albumu.");
+    }
+}
+
+async function selectLoadedTrack(trackIndex) {
+    setPlayerMessage("Uruchamianie wybranego utworu...");
+    try {
+        const report = await postJson("/api/playback/select", {
+            track_index: trackIndex,
+            track_count: playerState.tracks.length,
+            repeat_mode: playerState.repeatMode,
+        });
+        const nextIndex = report.state && Number.isInteger(report.state.track_index)
+            ? report.state.track_index
+            : trackIndex;
+        setCurrentTrack(nextIndex, report.state ? report.state.is_playing : true);
+        if (report.state && report.state.repeat_mode) {
+            playerState.repeatMode = report.state.repeat_mode;
+            updateRepeatButton();
+        }
+    } catch (error) {
+        setPlayerMessage(error.message || "Nie udalo sie uruchomic wybranego utworu.");
+    } finally {
+        setTrackPending(trackIndex, false);
     }
 }
 

@@ -11,6 +11,7 @@ sys.path.insert(0, str(SRC_DIR))
 
 from sonos_album_controller.config import AppConfig  # noqa: E402
 from sonos_album_controller.playback import (  # noqa: E402
+    select_queue_track,
     set_muted,
     set_playback_playing,
     set_repeat_mode,
@@ -275,6 +276,46 @@ class PlaybackTest(unittest.TestCase):
         self.assertEqual(RecordingSpeaker.instances[0].calls, [("play", None)])
         self.assertEqual(RecordingSpeaker.instances[1].calls, [("pause", None)])
         self.assertEqual(RecordingSpeaker.instances[2].calls, [("next", None)])
+
+    def test_select_queue_track_plays_requested_index_without_reloading_queue(self) -> None:
+        report = select_queue_track(
+            self._config(),
+            track_index=2,
+            track_count=3,
+            repeat_mode="album",
+            speaker_factory=RecordingSpeaker,
+        )
+
+        self.assertEqual(report.status, "ok")
+        self.assertIsNotNone(report.state)
+        assert report.state is not None
+        self.assertEqual(report.state.track_index, 2)
+        self.assertTrue(report.state.is_playing)
+        self.assertEqual(report.state.repeat_mode, "album")
+        self.assertEqual(RecordingSpeaker.instances[-1].calls, [("play_from_queue", 2)])
+
+    def test_select_queue_track_rejects_index_outside_visible_tracklist(self) -> None:
+        report = select_queue_track(
+            self._config(),
+            track_index=3,
+            track_count=3,
+            speaker_factory=RecordingSpeaker,
+        )
+
+        self.assertEqual(report.status, "invalid_request")
+        self.assertEqual(RecordingSpeaker.instances, [])
+
+    def test_select_queue_track_rejects_unknown_repeat_mode(self) -> None:
+        report = select_queue_track(
+            self._config(),
+            track_index=1,
+            track_count=3,
+            repeat_mode="shuffle",
+            speaker_factory=RecordingSpeaker,
+        )
+
+        self.assertEqual(report.status, "invalid_request")
+        self.assertEqual(RecordingSpeaker.instances, [])
 
     def test_next_stays_in_album_range_at_last_track(self) -> None:
         report = skip_next(self._config(), current_index=2, track_count=3, speaker_factory=RecordingSpeaker)

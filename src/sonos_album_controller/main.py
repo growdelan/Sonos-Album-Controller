@@ -12,6 +12,7 @@ from sonos_album_controller.config import load_config
 from sonos_album_controller.diagnostics import build_diagnostics, diagnostics_to_dict, test_sonos_connection
 from sonos_album_controller.playback import (
     playback_report_to_dict,
+    select_queue_track,
     set_muted,
     set_playback_playing,
     set_repeat_mode,
@@ -36,6 +37,12 @@ class StartPlaybackRequest(BaseModel):
 
 class PlaybackStateRequest(BaseModel):
     is_playing: bool
+
+
+class SelectTrackRequest(BaseModel):
+    track_index: int
+    track_count: int
+    repeat_mode: str = "none"
 
 
 class PreviousRequest(BaseModel):
@@ -107,6 +114,12 @@ def start_playback(request: StartPlaybackRequest) -> dict[str, object]:
 @app.post("/api/playback/state")
 def update_playback_state(request: PlaybackStateRequest) -> dict[str, object]:
     report = set_playback_playing(load_config(), request.is_playing)
+    return playback_report_to_dict(report)
+
+
+@app.post("/api/playback/select")
+def select_track(request: SelectTrackRequest) -> dict[str, object]:
+    report = select_queue_track(load_config(), request.track_index, request.track_count, request.repeat_mode)
     return playback_report_to_dict(report)
 
 
