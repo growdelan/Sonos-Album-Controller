@@ -4,6 +4,9 @@ const playerState = {
     currentTrackIndex: null,
     isPlaying: false,
     lastActionStartedAt: null,
+    repeatMode: "none",
+    elapsedBeforePlay: 0,
+    progressTimer: null,
 };
 
 async function loadStatus() {
@@ -48,6 +51,7 @@ function setPlaybackButtonsEnabled(enabled) {
     document.querySelector("#previous-control-button").disabled = !enabled;
     document.querySelector("#play-pause-control-button").disabled = !enabled;
     document.querySelector("#next-control-button").disabled = !enabled;
+    document.querySelector("#repeat-control-button").disabled = !enabled;
 }
 
 function updatePlayPauseButton() {
@@ -56,6 +60,133 @@ function updatePlayPauseButton() {
 
 function setPlayerMessage(message) {
     document.querySelector("#player-state").textContent = message;
+}
+
+function parseDurationSeconds(duration) {
+    if (!duration || typeof duration !== "string") {
+        return 0;
+    }
+    const parts = duration.split(":").map((part) => Number(part));
+    if (parts.some((part) => !Number.isFinite(part))) {
+        return 0;
+    }
+    return parts.reduce((total, part) => (total * 60) + part, 0);
+}
+
+function formatDuration(seconds) {
+    const safeSeconds = Math.max(0, Math.floor(seconds));
+    const minutes = Math.floor(safeSeconds / 60);
+    const rest = safeSeconds % 60;
+    return `${minutes}:${String(rest).padStart(2, "0")}`;
+}
+
+function currentTrackDurationSeconds() {
+    const track = playerState.tracks[playerState.currentTrackIndex];
+    return track ? parseDurationSeconds(track.duration) : 0;
+}
+
+function currentElapsedSeconds() {
+    if (playerState.currentTrackIndex === null) {
+        return 0;
+    }
+    if (!playerState.isPlaying || !playerState.lastActionStartedAt) {
+        return playerState.elapsedBeforePlay;
+    }
+    return playerState.elapsedBeforePlay + Math.floor((Date.now() - playerState.lastActionStartedAt) / 1000);
+}
+
+function updateProgressDisplay(elapsedOverride = null) {
+    const elapsed = elapsedOverride === null ? currentElapsedSeconds() : elapsedOverride;
+    const duration = currentTrackDurationSeconds();
+    const currentTarget = document.querySelector("#progress-current-time");
+    const durationTarget = document.querySelector("#progress-duration");
+    const progress = document.querySelector("#track-progress");
+
+    currentTarget.textContent = formatDuration(Math.min(elapsed, duration || elapsed));
+    durationTarget.textContent = duration > 0 ? formatDuration(duration) : "0:00";
+    const progressValue = duration > 0 ? Math.min(100, (Math.min(elapsed, duration) / duration) * 100) : 0;
+    progress.value = progressValue;
+    progress.setAttribute("value", String(progressValue));
+}
+
+function stopProgressTimer() {
+    if (playerState.progressTimer !== null) {
+        window.clearInterval(playerState.progressTimer);
+        playerState.progressTimer = null;
+    }
+}
+
+function startProgressTimer() {
+    stopProgressTimer();
+    if (!playerState.isPlaying || playerState.currentTrackIndex === null) {
+        updateProgressDisplay();
+        return;
+    }
+    playerState.progressTimer = window.setInterval(handleProgressTick, 1000);
+    updateProgressDisplay();
+}
+
+function handleProgressTick() {
+    const duration = currentTrackDurationSeconds();
+    const elapsed = currentElapsedSeconds();
+    if (duration <= 0 || elapsed < duration) {
+        updateProgressDisplay();
+        return;
+    }
+    advanceAfterTrackEnd();
+}
+
+function advanceAfterTrackEnd() {
+    const nextIndex = localNextIndex();
+    if (nextIndex === null) {
+        setAlbumEnded();
+        return;
+    }
+    setCurrentTrack(nextIndex, true, 0);
+}
+
+function setAlbumEnded() {
+    playerState.isPlaying = false;
+    playerState.elapsedBeforePlay = currentTrackDurationSeconds();
+    playerState.lastActionStartedAt = null;
+    stopProgressTimer();
+    updatePlayPauseButton();
+    setPlayerMessage("Koniec albumu");
+    updateProgressDisplay(playerState.elapsedBeforePlay);
+}
+
+function localNextIndex() {
+    if (playerState.currentTrackIndex === null) {
+        return null;
+    }
+    if (playerState.repeatMode === "track") {
+        return playerState.currentTrackIndex;
+    }
+    const nextIndex = playerState.currentTrackIndex + 1;
+    if (nextIndex < playerState.tracks.length) {
+        return nextIndex;
+    }
+    return playerState.repeatMode === "album" && playerState.tracks.length > 0 ? 0 : null;
+}
+
+function updateRepeatButton() {
+    const repeatButton = document.querySelector("#repeat-control-button");
+    repeatButton.classList.remove("repeat-mode-none", "repeat-mode-album", "repeat-mode-track");
+    repeatButton.classList.add(`repeat-mode-${playerState.repeatMode}`);
+    repeatButton.setAttribute("aria-pressed", playerState.repeatMode === "none" ? "false" : "true");
+    repeatButton.textContent = {
+        none: "Petla",
+        album: "Petla albumu",
+        track: "Petla 1",
+    }[playerState.repeatMode];
+}
+
+function nextRepeatMode() {
+    return {
+        none: "album",
+        album: "track",
+        track: "none",
+    }[playerState.repeatMode];
 }
 
 function updateActiveTrack() {
@@ -67,29 +198,33 @@ function updateActiveTrack() {
     });
 }
 
-function setCurrentTrack(trackIndex, isPlaying) {
+function setCurrentTrack(trackIndex, isPlaying, elapsedSeconds = 0) {
     const track = playerState.tracks[trackIndex];
     if (!track) {
         return;
     }
     playerState.currentTrackIndex = trackIndex;
     playerState.isPlaying = isPlaying;
-    playerState.lastActionStartedAt = Date.now();
+    playerState.elapsedBeforePlay = elapsedSeconds;
+    playerState.lastActionStartedAt = isPlaying ? Date.now() : null;
     setPlaybackButtonsEnabled(true);
     updatePlayPauseButton();
     setPlayerMessage(`${isPlaying ? "Odtwarzanie" : "Pauza"}: ${track.title}`);
     updateActiveTrack();
+    startProgressTimer();
 }
 
 function setWholeAlbumPlayback(album, trackIndex, isPlaying) {
     playerState.album = album;
     playerState.currentTrackIndex = Number.isInteger(trackIndex) ? trackIndex : 0;
     playerState.isPlaying = isPlaying;
-    playerState.lastActionStartedAt = Date.now();
+    playerState.elapsedBeforePlay = 0;
+    playerState.lastActionStartedAt = isPlaying ? Date.now() : null;
     setPlaybackButtonsEnabled(true);
     updatePlayPauseButton();
     setPlayerMessage(`${isPlaying ? "Odtwarzanie" : "Pauza"}: ${album.title}`);
     updateActiveTrack();
+    startProgressTimer();
 }
 
 function applyReportTracks(report) {
@@ -106,10 +241,15 @@ function resetPlayerState() {
     playerState.currentTrackIndex = null;
     playerState.isPlaying = false;
     playerState.lastActionStartedAt = null;
+    playerState.elapsedBeforePlay = 0;
+    playerState.repeatMode = "none";
+    stopProgressTimer();
     setPlaybackButtonsEnabled(false);
     updatePlayPauseButton();
+    updateRepeatButton();
     setPlayerMessage("Nic nie odtwarza");
     updateActiveTrack();
+    updateProgressDisplay(0);
 }
 
 function renderCover(target, album, placeholderText = "Album") {
@@ -322,11 +462,15 @@ async function togglePlaybackState() {
     const nextPlaying = !playerState.isPlaying;
     try {
         await postJson("/api/playback/state", { is_playing: nextPlaying });
+        const elapsed = currentElapsedSeconds();
         if (playerState.tracks.length === 0 && playerState.album) {
             setWholeAlbumPlayback(playerState.album, playerState.currentTrackIndex, nextPlaying);
+            playerState.elapsedBeforePlay = elapsed;
+            playerState.lastActionStartedAt = nextPlaying ? Date.now() : null;
+            startProgressTimer();
             return;
         }
-        setCurrentTrack(playerState.currentTrackIndex, nextPlaying);
+        setCurrentTrack(playerState.currentTrackIndex, nextPlaying, elapsed);
     } catch (error) {
         setPlayerMessage(error.message || "Nie udalo sie zmienic stanu odtwarzania.");
     }
@@ -341,6 +485,7 @@ async function playNextTrack() {
             await postJson("/api/playback/next", {
                 current_index: null,
                 track_count: null,
+                repeat_mode: playerState.repeatMode,
             });
             setWholeAlbumPlayback(playerState.album, playerState.currentTrackIndex, true);
             return;
@@ -348,10 +493,15 @@ async function playNextTrack() {
         const report = await postJson("/api/playback/next", {
             current_index: playerState.currentTrackIndex,
             track_count: playerState.tracks.length,
+            repeat_mode: playerState.repeatMode,
         });
         const nextIndex = report.state && Number.isInteger(report.state.track_index)
             ? report.state.track_index
             : playerState.currentTrackIndex;
+        if (playerState.repeatMode === "none" && nextIndex === playerState.currentTrackIndex) {
+            setAlbumEnded();
+            return;
+        }
         setCurrentTrack(nextIndex, true);
     } catch (error) {
         setPlayerMessage(error.message || "Nie udalo sie przejsc do nastepnego utworu.");
@@ -370,6 +520,8 @@ async function playPreviousTrack() {
             await postJson("/api/playback/previous", {
                 current_index: null,
                 position_seconds: elapsedSeconds,
+                track_count: null,
+                repeat_mode: playerState.repeatMode,
             });
             setWholeAlbumPlayback(playerState.album, playerState.currentTrackIndex, true);
             return;
@@ -377,6 +529,8 @@ async function playPreviousTrack() {
         const report = await postJson("/api/playback/previous", {
             current_index: playerState.currentTrackIndex,
             position_seconds: elapsedSeconds,
+            track_count: playerState.tracks.length,
+            repeat_mode: playerState.repeatMode,
         });
         const nextIndex = report.state && Number.isInteger(report.state.track_index)
             ? report.state.track_index
@@ -494,6 +648,23 @@ function updateVolume() {
         });
 }
 
+async function toggleRepeatMode() {
+    if (playerState.currentTrackIndex === null) {
+        return;
+    }
+    const previousMode = playerState.repeatMode;
+    const mode = nextRepeatMode();
+    playerState.repeatMode = mode;
+    updateRepeatButton();
+    try {
+        await postJson("/api/playback/repeat", { repeat_mode: mode });
+    } catch (error) {
+        playerState.repeatMode = previousMode;
+        updateRepeatButton();
+        setPlayerMessage(error.message || "Nie udalo sie ustawic trybu petli.");
+    }
+}
+
 document.querySelector("#refresh-albums-button").addEventListener("click", () => loadAlbums(true));
 document.querySelector("#diagnostics-button").addEventListener("click", loadDiagnostics);
 document.querySelector("#connection-test-button").addEventListener("click", testConnection);
@@ -501,9 +672,12 @@ document.querySelector("#back-to-albums-button").addEventListener("click", showA
 document.querySelector("#previous-control-button").addEventListener("click", playPreviousTrack);
 document.querySelector("#play-pause-control-button").addEventListener("click", togglePlaybackState);
 document.querySelector("#next-control-button").addEventListener("click", playNextTrack);
+document.querySelector("#repeat-control-button").addEventListener("click", toggleRepeatMode);
 document.querySelector("#mute-control-button").addEventListener("click", togglePreparedMuteControl);
 document.querySelector("#volume-control").addEventListener("change", updateVolume);
 
+updateRepeatButton();
+updateProgressDisplay(0);
 loadStatus();
 loadAlbums();
 loadDiagnostics();

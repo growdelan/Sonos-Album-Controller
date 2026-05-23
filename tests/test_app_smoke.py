@@ -162,14 +162,28 @@ class AppSmokeTest(unittest.TestCase):
         self.assertEqual(response.json()["state"]["volume"], 55)
 
     def test_playback_next_endpoint_passes_player_context(self) -> None:
-        report = PlaybackReport(status="ok", state=PlayerState(None, None, 2, is_playing=True))
+        report = PlaybackReport(status="ok", state=PlayerState(None, None, 2, is_playing=True, repeat_mode="album"))
 
         with patch("sonos_album_controller.main.skip_next", return_value=report) as skip:
-            response = self.client.post("/api/playback/next", json={"current_index": 1, "track_count": 3})
+            response = self.client.post(
+                "/api/playback/next",
+                json={"current_index": 1, "track_count": 3, "repeat_mode": "album"},
+            )
 
         self.assertEqual(response.status_code, 200)
         skip.assert_called_once()
         self.assertEqual(response.json()["state"]["track_index"], 2)
+        self.assertEqual(response.json()["state"]["repeat_mode"], "album")
+
+    def test_playback_repeat_endpoint_uses_playback_service(self) -> None:
+        report = PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=False, repeat_mode="track"))
+
+        with patch("sonos_album_controller.main.set_repeat_mode", return_value=report) as repeat:
+            response = self.client.post("/api/playback/repeat", json={"repeat_mode": "track"})
+
+        self.assertEqual(response.status_code, 200)
+        repeat.assert_called_once()
+        self.assertEqual(response.json()["state"]["repeat_mode"], "track")
 
     def test_frontend_is_served_from_backend(self) -> None:
         response = self.client.get("/")

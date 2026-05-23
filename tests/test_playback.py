@@ -13,6 +13,7 @@ from sonos_album_controller.config import AppConfig  # noqa: E402
 from sonos_album_controller.playback import (  # noqa: E402
     set_muted,
     set_playback_playing,
+    set_repeat_mode,
     set_volume,
     skip_next,
     skip_previous,
@@ -52,6 +53,7 @@ class RecordingSpeaker:
         self.calls: list[tuple[str, object | None]] = []
         self.volume = 31
         self.mute = False
+        self.play_mode = "NORMAL"
         self.avTransport = RecordingAvTransport(self)
         RecordingSpeaker.instances.append(self)
 
@@ -248,6 +250,39 @@ class PlaybackTest(unittest.TestCase):
         self.assertIsNotNone(report.state)
         assert report.state is not None
         self.assertEqual(report.state.track_index, 2)
+        self.assertEqual(RecordingSpeaker.instances[-1].calls, [])
+
+    def test_next_wraps_to_first_track_when_album_repeat_is_active(self) -> None:
+        report = skip_next(
+            self._config(),
+            current_index=2,
+            track_count=3,
+            repeat_mode="album",
+            speaker_factory=RecordingSpeaker,
+        )
+
+        self.assertEqual(report.status, "ok")
+        self.assertIsNotNone(report.state)
+        assert report.state is not None
+        self.assertEqual(report.state.track_index, 0)
+        self.assertEqual(report.state.repeat_mode, "album")
+        self.assertEqual(RecordingSpeaker.instances[-1].calls, [("play_from_queue", 0)])
+
+    def test_next_restarts_current_track_when_track_repeat_is_active(self) -> None:
+        report = skip_next(
+            self._config(),
+            current_index=1,
+            track_count=3,
+            repeat_mode="track",
+            speaker_factory=RecordingSpeaker,
+        )
+
+        self.assertEqual(report.status, "ok")
+        self.assertIsNotNone(report.state)
+        assert report.state is not None
+        self.assertEqual(report.state.track_index, 1)
+        self.assertEqual(report.state.repeat_mode, "track")
+        self.assertEqual(RecordingSpeaker.instances[-1].calls, [("play_from_queue", 1)])
 
     def test_previous_restarts_current_track_after_ten_seconds(self) -> None:
         report = skip_previous(self._config(), current_index=2, position_seconds=11, speaker_factory=RecordingSpeaker)
@@ -263,6 +298,23 @@ class PlaybackTest(unittest.TestCase):
         self.assertIsNotNone(report.state)
         assert report.state is not None
         self.assertEqual(report.state.track_index, 0)
+
+    def test_previous_wraps_to_last_track_when_album_repeat_is_active(self) -> None:
+        report = skip_previous(
+            self._config(),
+            current_index=0,
+            position_seconds=3,
+            track_count=3,
+            repeat_mode="album",
+            speaker_factory=RecordingSpeaker,
+        )
+
+        self.assertEqual(report.status, "ok")
+        self.assertIsNotNone(report.state)
+        assert report.state is not None
+        self.assertEqual(report.state.track_index, 2)
+        self.assertEqual(report.state.repeat_mode, "album")
+        self.assertEqual(RecordingSpeaker.instances[-1].calls, [("play_from_queue", 2)])
 
     def test_previous_before_ten_seconds_uses_previous_when_in_range(self) -> None:
         report = skip_previous(self._config(), current_index=2, position_seconds=3, speaker_factory=RecordingSpeaker)
@@ -293,6 +345,28 @@ class PlaybackTest(unittest.TestCase):
 
     def test_volume_rejects_out_of_range_value(self) -> None:
         report = set_volume(self._config(), 101, speaker_factory=RecordingSpeaker)
+
+        self.assertEqual(report.status, "invalid_request")
+
+    def test_repeat_mode_maps_to_sonos_play_mode(self) -> None:
+        config = self._config()
+
+        none_report = set_repeat_mode(config, "none", speaker_factory=RecordingSpeaker)
+        album_report = set_repeat_mode(config, "album", speaker_factory=RecordingSpeaker)
+        track_report = set_repeat_mode(config, "track", speaker_factory=RecordingSpeaker)
+
+        self.assertEqual(none_report.status, "ok")
+        self.assertEqual(album_report.status, "ok")
+        self.assertEqual(track_report.status, "ok")
+        self.assertEqual(RecordingSpeaker.instances[0].play_mode, "NORMAL")
+        self.assertEqual(RecordingSpeaker.instances[1].play_mode, "REPEAT_ALL")
+        self.assertEqual(RecordingSpeaker.instances[2].play_mode, "REPEAT_ONE")
+        self.assertIsNotNone(track_report.state)
+        assert track_report.state is not None
+        self.assertEqual(track_report.state.repeat_mode, "track")
+
+    def test_repeat_mode_rejects_unknown_mode(self) -> None:
+        report = set_repeat_mode(self._config(), "shuffle", speaker_factory=RecordingSpeaker)
 
         self.assertEqual(report.status, "invalid_request")
 
