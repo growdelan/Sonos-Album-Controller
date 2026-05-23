@@ -41,7 +41,8 @@ h1 {
     line-height: 1.05;
 }
 
-.status-message {
+.status-message,
+.panel-message {
     margin: 18px 0 28px;
     max-width: 680px;
     color: #304351;
@@ -96,15 +97,75 @@ button:hover {
     background: #172f3f;
 }
 
+.albums-panel,
 .diagnostics-panel {
     border-top: 1px solid #e2e7ed;
     margin-top: 28px;
     padding-top: 24px;
 }
 
+.section-heading {
+    align-items: baseline;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.section-heading p {
+    color: #526b7a;
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0;
+}
+
 h2 {
     margin: 0 0 16px;
     font-size: 1.25rem;
+}
+
+.albums-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.album-card {
+    border: 1px solid #e2e7ed;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.album-cover {
+    align-items: center;
+    aspect-ratio: 1;
+    background: #dfe7ee;
+    color: #47606f;
+    display: flex;
+    font-weight: 700;
+    justify-content: center;
+    min-width: 0;
+}
+
+.album-cover img {
+    display: block;
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+}
+
+.album-card h3 {
+    font-size: 1rem;
+    line-height: 1.35;
+    margin: 14px 14px 6px;
+    overflow-wrap: anywhere;
+}
+
+.album-card p {
+    color: #526b7a;
+    line-height: 1.4;
+    margin: 0 14px 14px;
+    overflow-wrap: anywhere;
 }
 
 .diagnostics-grid {

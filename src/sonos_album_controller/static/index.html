@@ -23,9 +23,18 @@
                 </div>
             </dl>
             <div class="actions">
+                <button id="refresh-albums-button" type="button">Odswiez albumy</button>
                 <button id="diagnostics-button" type="button">Diagnostyka</button>
                 <button id="connection-test-button" type="button">Testuj polaczenie z Sonos</button>
             </div>
+            <section class="albums-panel" aria-labelledby="albums-title">
+                <div class="section-heading">
+                    <h2 id="albums-title">Albumy</h2>
+                    <p id="albums-count">-</p>
+                </div>
+                <p id="albums-message" class="panel-message">Ladowanie albumow...</p>
+                <div id="albums-grid" class="albums-grid" aria-live="polite"></div>
+            </section>
             <section class="diagnostics-panel" aria-labelledby="diagnostics-title">
                 <h2 id="diagnostics-title">Diagnostyka</h2>
                 <dl class="diagnostics-grid">

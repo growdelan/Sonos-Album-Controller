@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from sonos_album_controller.albums import albums_report_to_dict, fetch_albums
 from sonos_album_controller.config import load_config
 from sonos_album_controller.diagnostics import build_diagnostics, diagnostics_to_dict, test_sonos_connection
 
@@ -30,6 +31,12 @@ def read_status() -> dict[str, object]:
         "sonos_integration": sonos_integration,
         "message": "Minimalny backend dziala bez polaczenia z Sonos.",
     }
+
+
+@app.get("/api/albums")
+def read_albums() -> dict[str, object]:
+    report = fetch_albums(load_config())
+    return albums_report_to_dict(report)
 
 
 @app.get("/api/diagnostics")

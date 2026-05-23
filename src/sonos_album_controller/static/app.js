@@ -20,6 +20,78 @@ async function loadStatus() {
     }
 }
 
+function renderAlbums(report) {
+    const grid = document.querySelector("#albums-grid");
+    const message = document.querySelector("#albums-message");
+    const count = document.querySelector("#albums-count");
+    const albums = Array.isArray(report.albums) ? report.albums : [];
+
+    grid.replaceChildren();
+    count.textContent = `${albums.length} albumow`;
+
+    if (report.status === "not_configured") {
+        message.textContent = report.message || "Skonfiguruj IP glosnika, aby pobrac albumy.";
+        return;
+    }
+
+    if (report.status === "error") {
+        message.textContent = report.message || "Nie udalo sie pobrac albumow.";
+        return;
+    }
+
+    if (albums.length === 0) {
+        message.textContent = "Brak albumow w Sonos Favorites.";
+        return;
+    }
+
+    message.textContent = "";
+    albums.forEach((album) => {
+        const card = document.createElement("article");
+        card.className = "album-card";
+
+        const cover = document.createElement("div");
+        cover.className = "album-cover";
+        if (album.album_art_uri) {
+            const image = document.createElement("img");
+            image.src = album.album_art_uri;
+            image.alt = "";
+            image.loading = "lazy";
+            cover.appendChild(image);
+        } else {
+            cover.textContent = "Album";
+        }
+
+        const title = document.createElement("h3");
+        title.textContent = album.title;
+
+        const artist = document.createElement("p");
+        artist.textContent = album.artist || "Wykonawca nieznany";
+
+        card.append(cover, title, artist);
+        grid.appendChild(card);
+    });
+}
+
+async function loadAlbums() {
+    const message = document.querySelector("#albums-message");
+    const count = document.querySelector("#albums-count");
+    message.textContent = "Ladowanie albumow...";
+    count.textContent = "-";
+
+    try {
+        const response = await fetch("/api/albums");
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        renderAlbums(await response.json());
+    } catch (error) {
+        document.querySelector("#albums-grid").replaceChildren();
+        message.textContent = "Nie udalo sie pobrac albumow.";
+        count.textContent = "0 albumow";
+    }
+}
+
 function renderDiagnostics(diagnostics) {
     document.querySelector("#diagnostics-ip").textContent = diagnostics.configured_ip || "Nie skonfigurowano";
     document.querySelector("#diagnostics-connection").textContent = diagnostics.connection_status;
@@ -62,8 +134,10 @@ async function testConnection() {
     }
 }
 
+document.querySelector("#refresh-albums-button").addEventListener("click", loadAlbums);
 document.querySelector("#diagnostics-button").addEventListener("click", loadDiagnostics);
 document.querySelector("#connection-test-button").addEventListener("click", testConnection);
 
 loadStatus();
+loadAlbums();
 loadDiagnostics();
