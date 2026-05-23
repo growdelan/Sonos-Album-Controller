@@ -56,7 +56,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Co jest w trakcie
 
-- Brak aktywnej implementacji; Milestone 9 jest zakończony, zapisany w repo i wypchnięty na `origin/codex/nowy-front`.
+- Brak aktywnej implementacji; Milestone 9 jest zakończony, zapisany w repo i wypchnięty na `origin/codex/nowy-front`. Lokalnie pozostaje nieśledzony plik wejściowy `poprawiony_front.md`, celowo poza commitami.
 
 ## Co jest następne
 
@@ -115,6 +115,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Drobne poprawki playera Milestone 9 | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `git diff --check`; `! rg -n "audio-quality-badge\|setAudioQualityBadge\|Jakosc niedostepna" src/sonos_album_controller/static` | PASS | Usunięto widoczny badge jakości z playera i martwe frontendowe odwołania; dodano przewijanie przepełnionych linii tytułu/kontekstu playera. Browser smoke niepowtórzony: narzędzie Browser i lokalny Playwright niedostępne w tej sesji. |
 | 2026-05-23 | Finalizacja Milestone 9 przed commitem | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `git diff --check`; `! rg -n "audio-quality-badge\|setAudioQualityBadge\|Jakosc niedostepna" src/sonos_album_controller/static`; `test ! -f package.json`; `git diff --quiet -- pyproject.toml uv.lock` | PASS | 60 testów PASS; składnia JS poprawna; brak błędów whitespace; brak martwego badge jakości w statycznym froncie; brak npm i brak zmian zależności. |
 | 2026-05-23 | Push Milestone 9 | `git push -u origin codex/nowy-front` | PASS | Gałąź `codex/nowy-front` wypchnięta do `origin`; pierwszy commit finalizacyjny: `19a5be0`. |
+| 2026-05-23 | Wrap-up po finalizacji Milestone 9 | `git status --short --branch`; `git log -3 --oneline --decorate`; `rg -n "Milestone 9\|origin/codex/nowy-front" ROADMAP.md STATUS.md` | PASS | `HEAD` i `origin/codex/nowy-front` wskazują `a8970a0`; jedyny lokalny nieśledzony plik to wejściowy `poprawiony_front.md`, pozostawiony poza repo. |
 
 ## Review
 
@@ -238,4 +239,5 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-23: Po self-review Milestone 9 przywrócono widoczny główny przycisk `Odtworz album`, dodano regresyjny test statycznego kontraktu album detail i dostosowano przewijanie JS do `prefers-reduced-motion`; milestone wymaga ponownego self-review.
 - 2026-05-23: Po uwadze wizualnej do playera usunięto badge jakości audio z frontendu i dodano marquee dla długiego tytułu oraz kontekstu odtwarzania.
 - 2026-05-23: Self-review Milestone 9 po poprawkach zakończył się bez problemów krytycznych; wykonano finalne walidacje i przygotowano zmianę do commita oraz pusha.
-- 2026-05-23: Sfinalizowano Milestone 9 na gałęzi `codex/nowy-front`, wykonano push do `origin`; commit implementacyjny `19a5be0`.
+- 2026-05-23: Sfinalizowano Milestone 9 na gałęzi `codex/nowy-front`, wykonano push do `origin`; commity finalizacyjne: `19a5be0` i `a8970a0`.
+- 2026-05-23: Wrap-up potwierdził spójność `ROADMAP.md` i `STATUS.md`; gałąź lokalna śledzi `origin/codex/nowy-front`, a jedyny nieśledzony plik `poprawiony_front.md` jest materiałem wejściowym spoza commita.
