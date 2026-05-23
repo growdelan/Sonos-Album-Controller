@@ -12,7 +12,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 ## Aktualny milestone / batch
 
 - Aktualny milestone: Milestone 5: Widok albumu, lista utworów i player bez odtwarzania
-- Status: zakończony po poprawkach self-review; gotowy do commita i pusha
+- Status: zakończony, sfinalizowany commitem `c29e929` i wypchnięty na `origin/codex/milestone-5`
 - Kontrakt sprintu: utworzony przed implementacją w odpowiedzi agenta; profil `openai_patch`, format patch/diff przez `apply_patch`
 - Zakres poza bieżącą pracą: kliknięcie utworu uruchamiające Sonosa, play/pause i next/previous, lokalny pasek postępu, tryby pętli, badge jakości audio poza miejscem w UI
 
@@ -45,7 +45,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Co jest w trakcie
 
-- Brak aktywnej implementacji; bieżąca zmiana jest w finalizacji operacyjnej.
+- Brak aktywnej implementacji; Milestone 5 został sfinalizowany i wypchnięty.
 
 ## Co jest następne
 
@@ -79,6 +79,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Milestone 5 Browser smoke UI | `@Browser` na `http://127.0.0.1:8000`; kliknięcie kafelka albumu; kliknięcie `Powrot do albumow`; kontrola layoutu desktop i 390x844 | PASS | UI pokazał `Smoke Album`, komunikat niedostępnej listy utworów, player `Nic nie odtwarza`, 0 utworów i działający powrót; kontrola layoutu nie wykazała wyjścia tekstu poza kontener. |
 | 2026-05-23 | Milestone 5 poprawki po self-review | `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; `@Browser` smoke aktywnych kontrolek głośności/mute | PASS | 35 testów PASS; suwak głośności i przycisk mute są aktywne w widoku albumu, `Mute` przełącza się lokalnie na `Unmute`; README i handoff zostały uzupełnione. |
 | 2026-05-23 | Finalizacja Milestone 5 przed commitem | `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check` | PASS | 35 testów PASS; brak błędów whitespace w diffie. |
+| 2026-05-23 | Wrap-up po finalizacji Milestone 5 | `git status --short --branch`; `git log -1 --oneline --decorate` | PASS | Working tree czysty; `HEAD` i `origin/codex/milestone-5` wskazują commit `c29e929`. |
 
 ## Review
 
@@ -137,7 +138,7 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 
 ## Handoff do następnej sesji
 
-- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, a Milestone 5 ma zakończony widok albumu i player bez odtwarzania po pozytywnym self-review.
+- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, a Milestone 5 ma zakończony widok albumu i player bez odtwarzania po pozytywnym self-review oraz finalizacji na gałęzi `codex/milestone-5`.
 - Decyzje, których nie wolno zgubić: FastAPI + SoCo, statyczny frontend HTML/CSS/vanilla JS, jeden Sonos Era 300 po stałym IP z `SONOS_SPEAKER_IP`, cache albumów w `~/.sonos-album-controller/cache/albums.json` albo `SONOS_CACHE_PATH`, jakość audio best effort, testy automatyczne bez realnego Sonosa.
 - Pliki, które warto doczytać jako pierwsze: `AGENTS.md`, `STATUS.md`, `spec.md`, `ROADMAP.md`, `src/sonos_album_controller/album_detail.py`, `src/sonos_album_controller/albums.py`, `src/sonos_album_controller/static/app.js`, `tests/test_albums.py`, `tests/test_album_cache.py`.
 - Następny bezpieczny krok: rozpocząć Milestone 6 od kontraktu sprintu; przed pracą z listami utworów w sterowaniu odtwarzaniem uwzględnić ograniczenie `album_track_expansion=0` dla Favorites Apple Music.
@@ -162,3 +163,4 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-23: Sfinalizowano Milestone 4 commitem `90325b0` i pushem gałęzi `codex/milestone-4` do `origin`.
 - 2026-05-23: Zaimplementowano Milestone 5 lokalnie: endpoint szczegółów albumu, próbę rozwijania listy utworów przez `MusicLibrary.browse`, widok albumu w UI, pusty player i powrót do albumów; milestone wymaga self-review.
 - 2026-05-23: Po self-review Milestone 5 uaktywniono lokalne kontrolki głośności/mute w stanie przygotowanym, uzupełniono README i handoff, a ponowny self-review zakończył się bez problemów krytycznych.
+- 2026-05-23: Sfinalizowano Milestone 5 commitem `c29e929` i pushem gałęzi `codex/milestone-5` do `origin`; wrap-up potwierdził czysty working tree.
