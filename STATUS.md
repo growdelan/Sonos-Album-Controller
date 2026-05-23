@@ -11,8 +11,8 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Aktualny milestone / batch
 
-- Aktualny milestone: Milestone 8: Jakość audio, pełniejsze błędy i polerowanie UI MVP
-- Status: zakończony po pozytywnym self-review, sfinalizowany commitem `91b954c` i wypchnięty na `origin/codex/milestone-8`
+- Aktualny milestone: Milestone 9: Premium music-first frontend
+- Status: zakończony po pozytywnym self-review, sfinalizowany commitami na gałęzi `codex/nowy-front` i wypchnięty do `origin`
 - Kontrakt sprintu: utworzony przed implementacją w odpowiedzi agenta; profil `openai_patch`, format patch/diff przez `apply_patch`
 - Zakres poza bieżącą pracą: nowe funkcje poza PRD, zdalny dostęp, logowanie użytkowników, obsługa wielu głośników, konteneryzacja, zgadywanie jakości audio bez danych
 
@@ -34,9 +34,10 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 - Istnieją lokalnie endpointy sterowania `POST /api/playback/start`, `/state`, `/next`, `/previous`, `/volume` i `/mute`, z kontrolowanym stanem `not_configured` bez IP.
 - UI pozwala kliknąć utwór, aktywować player, obsłużyć play/pause, next, previous, suwak głośności i mute/unmute, jeśli backend zwróci listę utworów; dla realnych Apple Music Favorites bez listy utworów pokazuje przycisk odtworzenia całego albumu, backend ładuje album do kolejki przez albumowe URI/metadane Favorites i odczytuje tracklistę z kolejki Sonosa.
 - Lokalnie zaimplementowano tryby pętli `none` / `album` / `track`, endpoint `POST /api/playback/repeat`, respektowanie pętli przez `next` i `previous`, przycisk pętli w UI oraz nieinteraktywny pasek postępu z lokalną predykcją przejść i stanem `Koniec albumu`.
-- Lokalnie zaimplementowano neutralny badge jakości audio `Jakosc niedostepna`, ponieważ PoC SoCo nie potwierdził wiarygodnego pola jakości; backend zwraca `audio_quality=null` i nie zgaduje Dolby Atmos/lossless.
+- Backend zwraca `audio_quality=null` i nie zgaduje Dolby Atmos/lossless; po przyroście premium UI frontend nie pokazuje już osobnego badge jakości audio.
 - Komunikaty błędów albumów, tracklisty, cache i playbacku zostały rozdzielone: UI/API dostają tekst użytkowy, a techniczne szczegóły trafiają do lokalnego logu.
 - UI MVP ma spójny ciemny styl dla ekranu albumów, widoku albumu, playera i diagnostyki.
+- Lokalnie zaimplementowano premium music-first UI z PRD 001: kompaktowy header ze statusami, duże okładki albumów, stały dolny player, premium widok albumu, dopracowane stany loading/cache/error, responsywność desktop/mobile i podstawową dostępność bez nowych zależności.
 
 ## Co jest skończone
 
@@ -51,14 +52,15 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 - Milestone 6 został zaimplementowany jako endpointy playbacku, aktywny player, fallback odtwarzania całego albumu przez `AddURIToQueue` oraz odczyt tracklisty z kolejki Sonosa, z walidacją automatyczną, realnym testem Sonos Era 300 i pozytywnym self-review po poprawkach.
 - Milestone 7 został zaimplementowany jako tryby pętli, backendowe ustawianie `play_mode`, lokalny pasek postępu i predykcja końca utworu, z walidacją automatyczną, Browser smoke i pozytywnym self-review.
 - Milestone 8 został zaimplementowany jako neutralny badge jakości audio, nietechniczne komunikaty błędów z lokalnym logowaniem szczegółów oraz ciemne polerowanie UI MVP, z walidacją automatyczną, rozszerzonym Browser smoke i pozytywnym self-review po poprawce diagnostyki.
+- Milestone 9 został zaimplementowany jako premium music-first frontend z PRD 001, z dużą siatką albumów, stałym dolnym playerem, responsywnym widokiem albumu, dostępnością podstawowych akcji, poprawkami po self-review i pozytywnym finalnym self-review.
 
 ## Co jest w trakcie
 
-- Brak aktywnej implementacji; Milestone 8 został sfinalizowany na gałęzi `codex/milestone-8`.
+- Brak aktywnej implementacji; Milestone 9 jest zakończony, zapisany w repo i wypchnięty na `origin/codex/nowy-front`. Lokalnie pozostaje nieśledzony plik wejściowy `poprawiony_front.md`, celowo poza commitami.
 
 ## Co jest następne
 
-- Rozpocząć kolejny przyrost od nowego PRD albo decyzji produktowej; kandydat techniczny do osobnego PoC to sprawdzenie, czy wykonawcę da się wydobyć z XML metadanych Favorites albo kolejki Sonosa po starcie albumu.
+- Rozpocząć kolejny przyrost od nowego PRD albo decyzji produktowej; ewentualne dalsze zmiany frontendu powinny wejść jako osobny milestone.
 
 ## Walidacja
 
@@ -106,6 +108,14 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Poprawki po self-review Milestone 8 | `uv run python -m unittest tests.test_diagnostics`; `uv run python -m unittest discover -s tests -p "test_*.py"`; rozszerzony `@Browser` smoke na `http://127.0.0.1:8029`; `curl -sS http://127.0.0.1:8029/api/smoke-state` | PASS | 59 testów PASS; diagnostyka nie pokazuje surowego `connection refused` w UI, szczegół zostaje w logu; Browser smoke objął cache warning, odświeżenie, album detail, start, next, previous, play/pause, pętlę, volume 77, mute i test diagnostyki. |
 | 2026-05-23 | Finalizacja Milestone 8 przed commitem | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `uv run python -m py_compile src/sonos_album_controller/app_logging.py src/sonos_album_controller/diagnostics.py src/sonos_album_controller/albums.py src/sonos_album_controller/album_refresh.py src/sonos_album_controller/playback.py src/sonos_album_controller/main.py`; `git diff --check` | PASS | 59 testów PASS; składnia JS i Python poprawna; brak błędów whitespace w diffie. |
 | 2026-05-23 | Wrap-up po finalizacji Milestone 8 | `git status --short --branch`; `git log -1 --oneline --decorate` | PASS | Working tree czysty; `HEAD` i `origin/codex/milestone-8` wskazują commit `91b954c`. |
+| 2026-05-23 | PRD 001 i plan Milestone 9 | `git diff --check -- spec.md ROADMAP.md prd/001-premium-music-ui.md`; `rg -n "001-premium-music-ui\|Milestone 9\|TODO" spec.md ROADMAP.md` | PASS | Dodano PRD 001, rozszerzono specyfikację i roadmapę; zmiana dokumentacyjna bez testów runtime. |
+| 2026-05-23 | Milestone 9 implementacja lokalna | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `git diff --check`; kontrola braku `package.json` i zmian w `pyproject.toml`/`uv.lock` | PASS | 59 testów PASS; składnia JS poprawna; brak błędów whitespace; brak nowych zależności frontendowych i backendowych. |
+| 2026-05-23 | Milestone 9 Browser smoke desktop/mobile z cache bez realnego Sonosa | `SONOS_SPEAKER_IP= SONOS_CACHE_PATH=<temp>/albums.json uv run uvicorn ... --port 8039`; Browser desktop 1440x900 i mobile 390x844 | PASS | Desktop: 5 kolumn gridu, okładki 1:1, player fixed 104 px, brak overflow, wejście w album i diagnostyka działają. Mobile: 2 kolumny, widok albumu w 1 kolumnie, przyciski min. 44 px, brak poziomego overflow, player fixed na dole. |
+| 2026-05-23 | Poprawki po self-review Milestone 9 | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `git diff --check` | PASS | 60 testów PASS; przycisk `Odtworz album` pozostaje widoczny w widoku albumu i startuje album od początku; dodano statyczny test kontraktu premium album detail i obsługę `prefers-reduced-motion` dla przewijania JS. |
+| 2026-05-23 | Drobne poprawki playera Milestone 9 | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `git diff --check`; `! rg -n "audio-quality-badge\|setAudioQualityBadge\|Jakosc niedostepna" src/sonos_album_controller/static` | PASS | Usunięto widoczny badge jakości z playera i martwe frontendowe odwołania; dodano przewijanie przepełnionych linii tytułu/kontekstu playera. Browser smoke niepowtórzony: narzędzie Browser i lokalny Playwright niedostępne w tej sesji. |
+| 2026-05-23 | Finalizacja Milestone 9 przed commitem | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `git diff --check`; `! rg -n "audio-quality-badge\|setAudioQualityBadge\|Jakosc niedostepna" src/sonos_album_controller/static`; `test ! -f package.json`; `git diff --quiet -- pyproject.toml uv.lock` | PASS | 60 testów PASS; składnia JS poprawna; brak błędów whitespace; brak martwego badge jakości w statycznym froncie; brak npm i brak zmian zależności. |
+| 2026-05-23 | Push Milestone 9 | `git push -u origin codex/nowy-front` | PASS | Gałąź `codex/nowy-front` wypchnięta do `origin`; pierwszy commit finalizacyjny: `19a5be0`. |
+| 2026-05-23 | Wrap-up po finalizacji Milestone 9 | `git status --short --branch`; `git log -3 --oneline --decorate`; `rg -n "Milestone 9\|origin/codex/nowy-front" ROADMAP.md STATUS.md` | PASS | `HEAD` i `origin/codex/nowy-front` wskazują `a8970a0`; jedyny lokalny nieśledzony plik to wejściowy `poprawiony_front.md`, pozostawiony poza repo. |
 
 ## Review
 
@@ -127,6 +137,8 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Self-review Milestone 7 | PASS | brak | Finalizacja operacyjna, commit i push. |
 | 2026-05-23 | Self-review Milestone 8 | P1/P2 | Diagnostyka pokazywała surowy wyjątek połączenia w UI; Browser smoke nie pokrywał pełnego przepływu MVP | Poprawki wdrożone; wykonano ponowny self-review przed finalizacją. |
 | 2026-05-23 | Self-review Milestone 8 po poprawkach | PASS | brak | Finalizacja operacyjna, commit i push. |
+| 2026-05-23 | Self-review Milestone 9 | P1/P2/P3 | `Odtworz album` był ukryty dla albumów z tracklistą; brak regresyjnej walidacji tej akcji; przewijanie JS nie respektowało `prefers-reduced-motion` | Poprawki wdrożone; wykonać ponowny self-review przed finalizacją. |
+| 2026-05-23 | Self-review Milestone 9 po poprawkach i korekcie playera | PASS | brak | Finalizacja operacyjna, commit i push. |
 
 ## Błędy narzędzi i odzyskiwanie
 
@@ -149,6 +161,8 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 | 2026-05-23 | Browser `evaluate` przy smoke Milestone 7 | InvalidArguments | Próba stubowania `window.fetch` w izolowanym kontekście Browser nie była poprawną ścieżką przygotowania danych UI | Uruchomiono tymczasowy fake backend FastAPI i powtórzono Browser smoke przez normalne kliknięcia UI | nie |
 | 2026-05-23 | Browser runtime przy rozszerzonym smoke Milestone 8 | InvalidArguments | Kolizja nazwy zmiennej `result` w utrzymywanym runtime JS | Powtórzono smoke z unikalnymi nazwami zmiennych | nie |
 | 2026-05-23 | Browser `evaluate` przy rozszerzonym smoke Milestone 8 | InvalidArguments | Próba użycia `fetch` w read-only page scope zakończyła się `fetch is not a function` | Odczytano stan UI przez DOM, a stan fake backendu osobno przez lokalny HTTP `curl` | nie |
+| 2026-05-23 | `apply_patch` dla dużych hunków `index.html` i `app.js` w Milestone 9 | InvalidArguments | Patch nie dopasował kontekstu przy szerokiej przebudowie statycznego frontendu | Rozbito zmianę na mniejsze hunki albo kontrolowanie podmieniono cały plik statyczny | nie |
+| 2026-05-23 | `apply_patch` dla zbiorczej aktualizacji `STATUS.md` po poprawkach Milestone 9 | InvalidArguments | Patch zakładał nieaktualny kontekst tabeli review | Rozbito aktualizację `STATUS.md` na mniejsze hunki | nie |
 
 ## Keep rate / trwałość zmian
 
@@ -166,6 +180,7 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 | 2026-05-23 | Milestone 6 playback, kolejka i podstawowe sterowanie | `src/`, `tests/`, `README.md`, `spec.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review | Poprawki po review ograniczyły się do synchronizacji `next`, fallbacku `AddURIToQueue`, odczytu tracklisty z kolejki Sonosa i spójnej dokumentacji; finalny self-review nie wykrył problemów krytycznych. |
 | 2026-05-23 | Milestone 7 tryby pętli i lokalna predykcja postępu | `src/`, `tests/`, `README.md`, `ROADMAP.md`, `STATUS.md` | 100% po self-review, bez poprawek krytycznych | Implementacja trybów pętli, endpointu repeat, lokalnego paska postępu i testów przeszła self-review bez zmian; Browser smoke wymagał tylko zmiany sposobu przygotowania danych testowych na fake backend. |
 | 2026-05-23 | Milestone 8 jakość audio, błędy i UI MVP | `src/`, `tests/`, `README.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review | Poprawki po review ograniczyły się do nietechnicznego komunikatu diagnostyki i rozszerzenia Browser smoke; neutralny fallback jakości audio, brak nowych zależności i ciemny UI MVP zostały utrzymane. |
+| 2026-05-23 | Milestone 9 premium music-first frontend | `src/sonos_album_controller/static/`, `tests/`, `prd/001-premium-music-ui.md`, `spec.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review i korekcie playera | Zmiana pozostała w statycznym HTML/CSS/vanilla JS, bez backendu i zależności; review wymusił tylko widoczny przycisk albumu, regresyjny test, reduced motion oraz kosmetyczne usunięcie badge jakości z playera. |
 
 ## Blokery i ryzyka
 
@@ -219,3 +234,10 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-23: Po self-review Milestone 8 poprawiono diagnostykę, aby UI nie pokazywał surowego wyjątku połączenia, oraz wykonano rozszerzony Browser smoke pełniejszego przepływu MVP; milestone wymaga ponownego self-review.
 - 2026-05-23: Self-review Milestone 8 po poprawkach zakończył się bez problemów krytycznych; dokumentacja operacyjna została przygotowana do commita i pusha.
 - 2026-05-23: Sfinalizowano Milestone 8 commitem `91b954c` i pushem gałęzi `codex/milestone-8` do `origin`; wrap-up potwierdził czysty working tree.
+- 2026-05-23: Dodano `prd/001-premium-music-ui.md`, rozszerzono `spec.md` i `ROADMAP.md` o Milestone 9.
+- 2026-05-23: Zaimplementowano Milestone 9 lokalnie: premium music-first frontend w HTML/CSS/vanilla JS, kompaktowy header, duża siatka albumów, stały dolny player, premium widok albumu, dopracowane stany UI, responsywność i podstawowa dostępność; milestone wymaga self-review.
+- 2026-05-23: Po self-review Milestone 9 przywrócono widoczny główny przycisk `Odtworz album`, dodano regresyjny test statycznego kontraktu album detail i dostosowano przewijanie JS do `prefers-reduced-motion`; milestone wymaga ponownego self-review.
+- 2026-05-23: Po uwadze wizualnej do playera usunięto badge jakości audio z frontendu i dodano marquee dla długiego tytułu oraz kontekstu odtwarzania.
+- 2026-05-23: Self-review Milestone 9 po poprawkach zakończył się bez problemów krytycznych; wykonano finalne walidacje i przygotowano zmianę do commita oraz pusha.
+- 2026-05-23: Sfinalizowano Milestone 9 na gałęzi `codex/nowy-front`, wykonano push do `origin`; commity finalizacyjne: `19a5be0` i `a8970a0`.
+- 2026-05-23: Wrap-up potwierdził spójność `ROADMAP.md` i `STATUS.md`; gałąź lokalna śledzi `origin/codex/nowy-front`, a jedyny nieśledzony plik `poprawiony_front.md` jest materiałem wejściowym spoza commita.
