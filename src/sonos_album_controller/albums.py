@@ -24,6 +24,13 @@ class Album:
 
 
 @dataclass(frozen=True)
+class Track:
+    number: int
+    title: str
+    duration: str | None
+
+
+@dataclass(frozen=True)
 class AlbumsReport:
     status: str
     albums: list[Album]
@@ -145,6 +152,33 @@ def normalize_album(item: Any) -> Album | None:
     )
 
 
+def normalize_track(item: Any, fallback_number: int) -> Track | None:
+    item_class = _first_text(_read_value(item, "item_class"), _read_value(item, "upnp_class"))
+    if item_class and "container" in item_class.lower():
+        return None
+
+    title = _first_text(_read_value(item, "title"), _read_value(item, "album"))
+    if title is None:
+        return None
+
+    raw_number = _first_text(
+        _read_value(item, "original_track_number"),
+        _read_value(item, "track_number"),
+        _read_value(item, "album_track_number"),
+    )
+    try:
+        number = int(raw_number) if raw_number is not None else fallback_number
+    except ValueError:
+        number = fallback_number
+
+    duration = _first_text(
+        _read_value(item, "duration"),
+        _read_value(item, "res_duration"),
+        *_resource_values(item, "duration"),
+    )
+    return Track(number=number, title=title, duration=duration)
+
+
 def _dedupe_albums(albums: list[Album]) -> list[Album]:
     seen: dict[str, int] = {}
     deduped = []
@@ -224,6 +258,75 @@ def fetch_albums(
 
     albums = _sort_albums(_dedupe_albums([album for item in favorite_items if (album := normalize_album(item))]))
     return AlbumsReport(status="ok", albums=albums)
+
+
+@dataclass(frozen=True)
+class TracksReport:
+    status: str
+    tracks: list[Track]
+    message: str | None = None
+
+
+def fetch_album_tracks(
+    config: AppConfig,
+    album_id: str,
+    speaker_factory: SpeakerFactory = SoCo,
+    music_library_factory: MusicLibraryFactory = MusicLibrary,
+    favorites_limit: int = 100,
+) -> TracksReport:
+    if config.sonos_speaker_ip is None:
+        return TracksReport(
+            status="not_configured",
+            tracks=[],
+            message=f"Ustaw {SONOS_SPEAKER_IP_ENV}, aby pobrac liste utworow albumu.",
+        )
+
+    try:
+        speaker = speaker_factory(config.sonos_speaker_ip)
+        library = music_library_factory(speaker)
+        typed_result = library.get_sonos_favorites(max_items=favorites_limit)
+    except Exception as error:
+        return TracksReport(
+            status="error",
+            tracks=[],
+            message=f"Nie udalo sie pobrac Favorites z Sonosa: {error}",
+        )
+
+    album_item = None
+    for item in _iter_search_result_items(typed_result):
+        album = normalize_album(item)
+        if album is not None and album.id == album_id:
+            album_item = item
+            break
+
+    if album_item is None:
+        return TracksReport(
+            status="not_found",
+            tracks=[],
+            message="Nie znaleziono albumu w typowanych Sonos Favorites.",
+        )
+
+    try:
+        browse_result = library.browse(album_item, max_items=favorites_limit)
+    except Exception as error:
+        return TracksReport(
+            status="error",
+            tracks=[],
+            message=f"Nie udalo sie pobrac listy utworow albumu: {error}",
+        )
+
+    tracks = [
+        track
+        for index, item in enumerate(_iter_search_result_items(browse_result), start=1)
+        if (track := normalize_track(item, fallback_number=index)) is not None
+    ]
+    if not tracks:
+        return TracksReport(
+            status="empty",
+            tracks=[],
+            message="Sonos nie zwrocil listy utworow dla tego albumu.",
+        )
+    return TracksReport(status="ok", tracks=tracks)
 
 
 def albums_report_to_dict(report: AlbumsReport) -> dict[str, Any]:

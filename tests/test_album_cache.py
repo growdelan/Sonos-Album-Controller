@@ -10,6 +10,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
 from sonos_album_controller.album_cache import read_album_cache, write_album_cache  # noqa: E402
+from sonos_album_controller.album_detail import load_album_detail  # noqa: E402
 from sonos_album_controller.album_refresh import load_albums  # noqa: E402
 from sonos_album_controller.albums import Album  # noqa: E402
 from sonos_album_controller.config import AppConfig  # noqa: E402
@@ -178,6 +179,40 @@ class AlbumCacheTest(unittest.TestCase):
 
         self.assertEqual(report.status, "error")
         self.assertEqual(report.albums, [])
+
+    def test_album_detail_uses_cached_album_when_tracks_need_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cache_path = Path(temp_dir) / "albums.json"
+            write_album_cache(
+                cache_path,
+                [
+                    Album(
+                        id="album:1",
+                        title="Cached Album",
+                        artist="Artist",
+                        uri="album:1",
+                        album_art_uri=None,
+                        date_added=None,
+                    )
+                ],
+                last_refresh="2026-05-23T12:00:00Z",
+            )
+
+            report = load_album_detail(
+                AppConfig(
+                    sonos_speaker_ip=None,
+                    log_path=Path(temp_dir) / "app.log",
+                    cache_path=cache_path,
+                ),
+                "album:1",
+            )
+
+        self.assertEqual(report.status, "tracks_unavailable")
+        self.assertIsNotNone(report.album)
+        assert report.album is not None
+        self.assertEqual(report.album.title, "Cached Album")
+        self.assertEqual(report.tracks, [])
+        self.assertIn("SONOS_SPEAKER_IP", report.message or "")
 
 
 if __name__ == "__main__":

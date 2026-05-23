@@ -27,13 +27,47 @@
                 <button id="diagnostics-button" type="button">Diagnostyka</button>
                 <button id="connection-test-button" type="button">Testuj polaczenie z Sonos</button>
             </div>
-            <section class="albums-panel" aria-labelledby="albums-title">
+            <section id="albums-panel" class="albums-panel" aria-labelledby="albums-title">
                 <div class="section-heading">
                     <h2 id="albums-title">Albumy</h2>
                     <p id="albums-count">-</p>
                 </div>
                 <p id="albums-message" class="panel-message">Ladowanie albumow...</p>
                 <div id="albums-grid" class="albums-grid" aria-live="polite"></div>
+            </section>
+            <section id="album-detail-panel" class="album-detail-panel" aria-labelledby="album-detail-title" hidden>
+                <button id="back-to-albums-button" class="secondary-button" type="button">Powrot do albumow</button>
+                <div class="album-detail-layout">
+                    <div id="album-detail-cover" class="album-detail-cover">Album</div>
+                    <div>
+                        <p class="eyebrow">Album</p>
+                        <h2 id="album-detail-title">-</h2>
+                        <p id="album-detail-artist" class="album-detail-artist">-</p>
+                        <p id="album-detail-message" class="panel-message"></p>
+                    </div>
+                </div>
+                <section class="tracks-panel" aria-labelledby="tracks-title">
+                    <div class="section-heading">
+                        <h3 id="tracks-title">Utwory</h3>
+                        <p id="tracks-count">-</p>
+                    </div>
+                    <ol id="tracks-list" class="tracks-list" aria-live="polite"></ol>
+                </section>
+                <section class="player-panel" aria-labelledby="player-title">
+                    <h3 id="player-title">Player</h3>
+                    <p id="player-state" class="player-state">Nic nie odtwarza</p>
+                    <div class="player-controls">
+                        <button type="button" disabled>Poprzedni</button>
+                        <button type="button" disabled>Play/Pause</button>
+                        <button type="button" disabled>Nastepny</button>
+                        <button type="button" disabled>Petla</button>
+                    </div>
+                    <div class="volume-controls">
+                        <label for="volume-control">Glosnosc</label>
+                        <input id="volume-control" type="range" min="0" max="100" value="30">
+                        <button id="mute-control-button" type="button" aria-pressed="false">Mute</button>
+                    </div>
+                </section>
             </section>
             <section class="diagnostics-panel" aria-labelledby="diagnostics-title">
                 <h2 id="diagnostics-title">Diagnostyka</h2>
