@@ -12,7 +12,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 ## Aktualny milestone / batch
 
 - Aktualny milestone: Milestone 3: Albumy z Sonos Favorites i ekran główny
-- Status: zakończone, pozytywny self-review po poprawkach; gotowe do commita i pusha
+- Status: zakończone, pozytywny self-review po poprawkach; zapisane w commit `a3661b3` i wypchnięte na `origin/codex/milestone-3`
 - Kontrakt sprintu: utworzony przed implementacją w odpowiedzi agenta; profil `openai_patch`, format patch/diff przez `apply_patch`
 - Zakres poza bieżącą pracą: trwały cache, widok szczegółów albumu, kliknięcie utworu i kolejka Sonosa, player, jakość audio
 
@@ -132,3 +132,4 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-22: Self-review Milestone 2 po poprawce loggera zakończony bez problemów krytycznych; oznaczono milestone jako gotowy do finalizacji.
 - 2026-05-23: Zaimplementowano Milestone 3: endpoint `/api/albums`, normalizacja albumów z Favorites, odrzucanie playlist/radia/utworów, ekran główny z kafelkami i przyciskiem odświeżania; testy automatyczne i Browser smoke bez IP zakończone powodzeniem.
 - 2026-05-23: Po self-review Milestone 3 poprawiono scalanie metadanych okładek, ujednolicono dokumentację operacyjną i zakończono ponowny self-review bez problemów krytycznych.
+- 2026-05-23: Sfinalizowano Milestone 3 commitem `a3661b3` i pushem gałęzi `codex/milestone-3` do `origin`.
