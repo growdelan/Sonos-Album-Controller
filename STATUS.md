@@ -12,7 +12,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 ## Aktualny milestone / batch
 
 - Aktualny milestone: Milestone 4: Cache albumów i odświeżanie danych
-- Status: zakończone, pozytywny self-review po poprawkach; gotowe do commita i pusha
+- Status: zakończone, pozytywny self-review po poprawkach; zapisane w commit `90325b0` i wypchnięte na `origin/codex/milestone-4`
 - Kontrakt sprintu: utworzony przed implementacją w odpowiedzi agenta; profil `openai_patch`, format patch/diff przez `apply_patch`
 - Zakres poza bieżącą pracą: widok szczegółów albumu, kliknięcie utworu i kolejka Sonosa, player, jakość audio
 
@@ -144,4 +144,4 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-23: Sfinalizowano Milestone 3 commitem `a3661b3` i pushem gałęzi `codex/milestone-3` do `origin`.
 - 2026-05-23: Zaimplementowano Milestone 4 lokalnie: `SONOS_CACHE_PATH`, trwały cache albumów JSON, endpoint `POST /api/albums/refresh`, fallback do cache przy błędzie odświeżenia, diagnostykę cache i komunikaty UI dla danych z cache; milestone wymaga self-review.
 - 2026-05-23: Po self-review Milestone 4 poprawiono komunikat dla pustego cache i obsługę błędu zapisu cache przy świeżych danych z Sonosa; milestone wymaga ponownego self-review.
-- 2026-05-23: Self-review Milestone 4 po poprawkach zakończony bez problemów krytycznych; oznaczono milestone jako gotowy do finalizacji.
+- 2026-05-23: Sfinalizowano Milestone 4 commitem `90325b0` i pushem gałęzi `codex/milestone-4` do `origin`.
