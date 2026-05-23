@@ -34,8 +34,16 @@ Endpointy:
 - `GET /api/albums` - pobiera albumy z Sonos Favorites / My Sonos, aktualizuje cache po sukcesie i zwraca cache przy błędzie odświeżenia.
 - `POST /api/albums/refresh` - wymusza próbę odświeżenia albumów i zachowuje poprzedni cache przy błędzie.
 - `GET /api/albums/{album_id}` - zwraca szczegóły albumu, listę utworów jeśli SoCo potrafi ją rozwinąć oraz czytelny komunikat, gdy lista utworów jest niedostępna.
+- `POST /api/playback/start` - czyści kolejkę, ładuje cały album i startuje od wybranego indeksu utworu; gdy Sonos nie zwraca listy utworów, uruchamia cały album przez albumowe URI i metadane z Favorites, a następnie odczytuje listę utworów z kolejki Sonosa.
+- `POST /api/playback/state` - wznawia albo pauzuje odtwarzanie.
+- `POST /api/playback/next` - przechodzi do następnego utworu.
+- `POST /api/playback/previous` - obsługuje poprzedni utwór z regułą 10 sekund.
+- `POST /api/playback/volume` - ustawia głośność w zakresie 0-100.
+- `POST /api/playback/mute` - ustawia mute/unmute.
 - `GET /api/diagnostics` - zwraca skonfigurowane IP, status połączenia, ostatni błąd i stan cache.
 - `POST /api/diagnostics/test-connection` - wykonuje test połączenia z Sonosem.
+
+Ograniczenie realnej integracji: dla aktualnych Apple Music Favorites testowanych na Sonos Era 300 metoda SoCo `MusicLibrary.browse` zwraca 0 utworów. Aplikacja ma fallback odtworzenia całego albumu przez `AddURIToQueue` z albumowym URI i metadanymi Favorites; po załadowaniu albumu odczytuje tytuły i czasy utworów z kolejki Sonosa.
 
 ## Testy
 

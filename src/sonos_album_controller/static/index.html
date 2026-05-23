@@ -44,6 +44,7 @@
                         <h2 id="album-detail-title">-</h2>
                         <p id="album-detail-artist" class="album-detail-artist">-</p>
                         <p id="album-detail-message" class="panel-message"></p>
+                        <button id="play-album-button" class="play-album-button" type="button" hidden>Odtworz album</button>
                     </div>
                 </div>
                 <section class="tracks-panel" aria-labelledby="tracks-title">
@@ -57,9 +58,9 @@
                     <h3 id="player-title">Player</h3>
                     <p id="player-state" class="player-state">Nic nie odtwarza</p>
                     <div class="player-controls">
-                        <button type="button" disabled>Poprzedni</button>
-                        <button type="button" disabled>Play/Pause</button>
-                        <button type="button" disabled>Nastepny</button>
+                        <button id="previous-control-button" type="button" disabled>Poprzedni</button>
+                        <button id="play-pause-control-button" type="button" disabled>Play</button>
+                        <button id="next-control-button" type="button" disabled>Nastepny</button>
                         <button type="button" disabled>Petla</button>
                     </div>
                     <div class="volume-controls">

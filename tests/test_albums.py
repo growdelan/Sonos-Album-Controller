@@ -169,6 +169,7 @@ class AlbumsTest(unittest.TestCase):
             {
                 "title": "Track",
                 "item_class": "object.item.audioItem.musicTrack",
+                "uri": "track:7",
                 "original_track_number": "7",
                 "duration": "0:05:10",
             },
@@ -180,6 +181,7 @@ class AlbumsTest(unittest.TestCase):
         self.assertEqual(track.number, 7)
         self.assertEqual(track.title, "Track")
         self.assertEqual(track.duration, "0:05:10")
+        self.assertEqual(track.uri, "track:7")
 
     def test_fetch_albums_uses_injected_speaker_and_library_without_io(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

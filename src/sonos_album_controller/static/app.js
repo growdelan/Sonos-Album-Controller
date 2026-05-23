@@ -1,3 +1,11 @@
+const playerState = {
+    album: null,
+    tracks: [],
+    currentTrackIndex: null,
+    isPlaying: false,
+    lastActionStartedAt: null,
+};
+
 async function loadStatus() {
     const message = document.querySelector("#status-message");
     const backendStatus = document.querySelector("#backend-status");
@@ -34,6 +42,74 @@ function resetPreparedVolumeControls() {
     const muteButton = document.querySelector("#mute-control-button");
     muteButton.setAttribute("aria-pressed", "false");
     muteButton.textContent = "Mute";
+}
+
+function setPlaybackButtonsEnabled(enabled) {
+    document.querySelector("#previous-control-button").disabled = !enabled;
+    document.querySelector("#play-pause-control-button").disabled = !enabled;
+    document.querySelector("#next-control-button").disabled = !enabled;
+}
+
+function updatePlayPauseButton() {
+    document.querySelector("#play-pause-control-button").textContent = playerState.isPlaying ? "Pause" : "Play";
+}
+
+function setPlayerMessage(message) {
+    document.querySelector("#player-state").textContent = message;
+}
+
+function updateActiveTrack() {
+    document.querySelectorAll("#tracks-list li").forEach((item) => {
+        const index = Number(item.dataset.trackIndex);
+        const isActive = index === playerState.currentTrackIndex;
+        item.classList.toggle("active-track", isActive);
+        item.querySelector(".track-number").textContent = isActive ? "▶" : item.dataset.trackNumber;
+    });
+}
+
+function setCurrentTrack(trackIndex, isPlaying) {
+    const track = playerState.tracks[trackIndex];
+    if (!track) {
+        return;
+    }
+    playerState.currentTrackIndex = trackIndex;
+    playerState.isPlaying = isPlaying;
+    playerState.lastActionStartedAt = Date.now();
+    setPlaybackButtonsEnabled(true);
+    updatePlayPauseButton();
+    setPlayerMessage(`${isPlaying ? "Odtwarzanie" : "Pauza"}: ${track.title}`);
+    updateActiveTrack();
+}
+
+function setWholeAlbumPlayback(album, trackIndex, isPlaying) {
+    playerState.album = album;
+    playerState.currentTrackIndex = Number.isInteger(trackIndex) ? trackIndex : 0;
+    playerState.isPlaying = isPlaying;
+    playerState.lastActionStartedAt = Date.now();
+    setPlaybackButtonsEnabled(true);
+    updatePlayPauseButton();
+    setPlayerMessage(`${isPlaying ? "Odtwarzanie" : "Pauza"}: ${album.title}`);
+    updateActiveTrack();
+}
+
+function applyReportTracks(report) {
+    if (!Array.isArray(report.tracks) || report.tracks.length === 0 || !playerState.album) {
+        return false;
+    }
+    playerState.tracks = report.tracks;
+    renderTracks(playerState.tracks, playerState.album.id);
+    document.querySelector("#play-album-button").hidden = true;
+    return true;
+}
+
+function resetPlayerState() {
+    playerState.currentTrackIndex = null;
+    playerState.isPlaying = false;
+    playerState.lastActionStartedAt = null;
+    setPlaybackButtonsEnabled(false);
+    updatePlayPauseButton();
+    setPlayerMessage("Nic nie odtwarza");
+    updateActiveTrack();
 }
 
 function renderCover(target, album, placeholderText = "Album") {
@@ -108,15 +184,23 @@ function renderAlbums(report) {
     });
 }
 
-function renderTracks(tracks) {
+function renderTracks(tracks, albumId) {
     const list = document.querySelector("#tracks-list");
     const count = document.querySelector("#tracks-count");
 
     list.replaceChildren();
     count.textContent = `${tracks.length} utworow`;
 
-    tracks.forEach((track) => {
+    tracks.forEach((track, index) => {
         const item = document.createElement("li");
+        item.dataset.trackIndex = String(index);
+        item.dataset.trackNumber = String(track.number);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "track-button";
+        button.addEventListener("click", () => startTrack(albumId, index));
+
         const number = document.createElement("span");
         number.className = "track-number";
         number.textContent = track.number;
@@ -129,15 +213,18 @@ function renderTracks(tracks) {
         duration.className = "track-duration";
         duration.textContent = track.duration || "-";
 
-        item.append(number, title, duration);
+        button.append(number, title, duration);
+        item.appendChild(button);
         list.appendChild(item);
     });
+    updateActiveTrack();
 }
 
 function renderAlbumDetail(report) {
     const album = report.album;
     const message = document.querySelector("#album-detail-message");
     const cover = document.querySelector("#album-detail-cover");
+    const playAlbumButton = document.querySelector("#play-album-button");
     const tracks = Array.isArray(report.tracks) ? report.tracks : [];
 
     if (!album) {
@@ -146,21 +233,158 @@ function renderAlbumDetail(report) {
         cover.replaceChildren();
         cover.textContent = "Album";
         message.textContent = report.message || "Nie znaleziono albumu.";
-        renderTracks([]);
+        playAlbumButton.hidden = true;
+        playAlbumButton.onclick = null;
+        playerState.album = null;
+        playerState.tracks = [];
+        renderTracks([], null);
+        resetPlayerState();
         showAlbumDetailView();
         return;
     }
 
+    playerState.album = album;
+    playerState.tracks = tracks;
     document.querySelector("#album-detail-title").textContent = album.title;
     document.querySelector("#album-detail-artist").textContent = album.artist || "Wykonawca nieznany";
     renderCover(cover, album);
-    renderTracks(tracks);
+    renderTracks(tracks, album.id);
     message.textContent = report.status === "ok"
         ? ""
         : report.message || "Nie udalo sie pobrac listy utworow.";
-    document.querySelector("#player-state").textContent = "Nic nie odtwarza";
+    playAlbumButton.hidden = tracks.length > 0;
+    playAlbumButton.onclick = tracks.length > 0 ? null : () => startAlbum(album.id);
+    resetPlayerState();
     resetPreparedVolumeControls();
     showAlbumDetailView();
+}
+
+async function postJson(url, payload) {
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    const report = await response.json();
+    if (report.status !== "ok") {
+        throw new Error(report.message || "Operacja Sonos nie powiodla sie.");
+    }
+    return report;
+}
+
+async function startTrack(albumId, trackIndex) {
+    setPlayerMessage("Ladowanie kolejki Sonosa...");
+    try {
+        const report = await postJson("/api/playback/start", { album_id: albumId, track_index: trackIndex });
+        applyReportTracks(report);
+        if (report.state && report.state.track) {
+            const nextIndex = Number.isInteger(report.state.track_index) ? report.state.track_index : trackIndex;
+            setCurrentTrack(nextIndex, report.state.is_playing);
+            return;
+        }
+        if (report.state && report.state.album) {
+            setWholeAlbumPlayback(report.state.album, report.state.track_index, report.state.is_playing);
+        }
+    } catch (error) {
+        setPlayerMessage(error.message || "Nie udalo sie uruchomic utworu.");
+    }
+}
+
+async function startAlbum(albumId) {
+    setPlayerMessage("Ladowanie albumu do kolejki Sonosa...");
+    try {
+        const report = await postJson("/api/playback/start", { album_id: albumId, track_index: 0 });
+        applyReportTracks(report);
+        if (report.state && report.state.track) {
+            const nextIndex = Number.isInteger(report.state.track_index) ? report.state.track_index : 0;
+            setCurrentTrack(nextIndex, report.state.is_playing);
+            return;
+        }
+        if (report.state && report.state.album) {
+            setWholeAlbumPlayback(report.state.album, report.state.track_index, report.state.is_playing);
+            return;
+        }
+        setPlayerMessage("Album zostal uruchomiony.");
+    } catch (error) {
+        setPlayerMessage(error.message || "Nie udalo sie uruchomic albumu.");
+    }
+}
+
+async function togglePlaybackState() {
+    if (playerState.currentTrackIndex === null) {
+        return;
+    }
+    const nextPlaying = !playerState.isPlaying;
+    try {
+        await postJson("/api/playback/state", { is_playing: nextPlaying });
+        if (playerState.tracks.length === 0 && playerState.album) {
+            setWholeAlbumPlayback(playerState.album, playerState.currentTrackIndex, nextPlaying);
+            return;
+        }
+        setCurrentTrack(playerState.currentTrackIndex, nextPlaying);
+    } catch (error) {
+        setPlayerMessage(error.message || "Nie udalo sie zmienic stanu odtwarzania.");
+    }
+}
+
+async function playNextTrack() {
+    if (playerState.currentTrackIndex === null) {
+        return;
+    }
+    try {
+        if (playerState.tracks.length === 0 && playerState.album) {
+            await postJson("/api/playback/next", {
+                current_index: null,
+                track_count: null,
+            });
+            setWholeAlbumPlayback(playerState.album, playerState.currentTrackIndex, true);
+            return;
+        }
+        const report = await postJson("/api/playback/next", {
+            current_index: playerState.currentTrackIndex,
+            track_count: playerState.tracks.length,
+        });
+        const nextIndex = report.state && Number.isInteger(report.state.track_index)
+            ? report.state.track_index
+            : playerState.currentTrackIndex;
+        setCurrentTrack(nextIndex, true);
+    } catch (error) {
+        setPlayerMessage(error.message || "Nie udalo sie przejsc do nastepnego utworu.");
+    }
+}
+
+async function playPreviousTrack() {
+    if (playerState.currentTrackIndex === null) {
+        return;
+    }
+    const elapsedSeconds = playerState.lastActionStartedAt
+        ? Math.floor((Date.now() - playerState.lastActionStartedAt) / 1000)
+        : 0;
+    try {
+        if (playerState.tracks.length === 0 && playerState.album) {
+            await postJson("/api/playback/previous", {
+                current_index: null,
+                position_seconds: elapsedSeconds,
+            });
+            setWholeAlbumPlayback(playerState.album, playerState.currentTrackIndex, true);
+            return;
+        }
+        const report = await postJson("/api/playback/previous", {
+            current_index: playerState.currentTrackIndex,
+            position_seconds: elapsedSeconds,
+        });
+        const nextIndex = report.state && Number.isInteger(report.state.track_index)
+            ? report.state.track_index
+            : Math.max(playerState.currentTrackIndex - 1, 0);
+        setCurrentTrack(nextIndex, true);
+    } catch (error) {
+        setPlayerMessage(error.message || "Nie udalo sie przejsc do poprzedniego utworu.");
+    }
 }
 
 async function loadAlbumDetail(albumId) {
@@ -252,15 +476,33 @@ async function testConnection() {
 function togglePreparedMuteControl() {
     const muteButton = document.querySelector("#mute-control-button");
     const nextPressed = muteButton.getAttribute("aria-pressed") !== "true";
-    muteButton.setAttribute("aria-pressed", String(nextPressed));
-    muteButton.textContent = nextPressed ? "Unmute" : "Mute";
+    postJson("/api/playback/mute", { muted: nextPressed })
+        .then(() => {
+            muteButton.setAttribute("aria-pressed", String(nextPressed));
+            muteButton.textContent = nextPressed ? "Unmute" : "Mute";
+        })
+        .catch((error) => {
+            setPlayerMessage(error.message || "Nie udalo sie ustawic mute.");
+        });
+}
+
+function updateVolume() {
+    const volume = Number(document.querySelector("#volume-control").value);
+    postJson("/api/playback/volume", { volume })
+        .catch((error) => {
+            setPlayerMessage(error.message || "Nie udalo sie ustawic glosnosci.");
+        });
 }
 
 document.querySelector("#refresh-albums-button").addEventListener("click", () => loadAlbums(true));
 document.querySelector("#diagnostics-button").addEventListener("click", loadDiagnostics);
 document.querySelector("#connection-test-button").addEventListener("click", testConnection);
 document.querySelector("#back-to-albums-button").addEventListener("click", showAlbumsView);
+document.querySelector("#previous-control-button").addEventListener("click", playPreviousTrack);
+document.querySelector("#play-pause-control-button").addEventListener("click", togglePlaybackState);
+document.querySelector("#next-control-button").addEventListener("click", playNextTrack);
 document.querySelector("#mute-control-button").addEventListener("click", togglePreparedMuteControl);
+document.querySelector("#volume-control").addEventListener("change", updateVolume);
 
 loadStatus();
 loadAlbums();

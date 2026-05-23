@@ -11,10 +11,10 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Aktualny milestone / batch
 
-- Aktualny milestone: Milestone 5: Widok albumu, lista utworów i player bez odtwarzania
-- Status: zakończony, sfinalizowany commitem `c29e929` i wypchnięty na `origin/codex/milestone-5`
+- Aktualny milestone: Milestone 6: Start od wybranego utworu, kolejka i podstawowe sterowanie
+- Status: zakończony, sfinalizowany commitem `6cc3280` i wypchnięty na `origin/codex/milestone-6`
 - Kontrakt sprintu: utworzony przed implementacją w odpowiedzi agenta; profil `openai_patch`, format patch/diff przez `apply_patch`
-- Zakres poza bieżącą pracą: kliknięcie utworu uruchamiające Sonosa, play/pause i next/previous, lokalny pasek postępu, tryby pętli, badge jakości audio poza miejscem w UI
+- Zakres poza bieżącą pracą: tryby pętli albumu i jednego utworu, lokalny pasek postępu z automatycznym przejściem, badge jakości audio, aktywna synchronizacja zmian zewnętrznych
 
 ## Co działa
 
@@ -31,6 +31,8 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 - Endpointy albumów zapisują cache po udanym odświeżeniu i zwracają istniejący cache przy błędzie odświeżenia.
 - Istnieje endpoint szczegółów albumu `GET /api/albums/{album_id}` zwracający metadane albumu, listę utworów jeśli SoCo potrafi ją rozwinąć oraz kontrolowany komunikat błędu, gdy lista utworów jest niedostępna.
 - UI pozwala wejść z kafelka do widoku albumu, pokazuje dużą okładkę, metadane, listę utworów lub błąd oraz player w stanie `Nic nie odtwarza`.
+- Istnieją lokalnie endpointy sterowania `POST /api/playback/start`, `/state`, `/next`, `/previous`, `/volume` i `/mute`, z kontrolowanym stanem `not_configured` bez IP.
+- UI pozwala kliknąć utwór, aktywować player, obsłużyć play/pause, next, previous, suwak głośności i mute/unmute, jeśli backend zwróci listę utworów; dla realnych Apple Music Favorites bez listy utworów pokazuje przycisk odtworzenia całego albumu, backend ładuje album do kolejki przez albumowe URI/metadane Favorites i odczytuje tracklistę z kolejki Sonosa. Tryby pętli i pasek postępu pozostają poza zakresem Milestone 6.
 
 ## Co jest skończone
 
@@ -42,15 +44,16 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 - Milestone 3 został zaimplementowany jako endpoint albumów z Sonos Favorites i ekran główny z kafelkami, z walidacją automatyczną, Browser smoke i realnym testem na Sonos Era 300.
 - Milestone 4 został zaimplementowany jako trwały cache albumów i odświeżanie danych, z walidacją automatyczną, smoke HTTP i pozytywnym self-review po poprawkach.
 - Milestone 5 został zaimplementowany jako widok albumu, lista utworów best effort i player bez odtwarzania, z walidacją automatyczną, smoke HTTP, Browser smoke i pozytywnym self-review po poprawkach.
+- Milestone 6 został zaimplementowany jako endpointy playbacku, aktywny player, fallback odtwarzania całego albumu przez `AddURIToQueue` oraz odczyt tracklisty z kolejki Sonosa, z walidacją automatyczną, realnym testem Sonos Era 300 i pozytywnym self-review po poprawkach.
 
 ## Co jest w trakcie
 
-- Brak aktywnej implementacji; Milestone 5 został sfinalizowany i wypchnięty.
+- Brak aktywnej implementacji; Milestone 6 został sfinalizowany i wypchnięty.
 
 ## Co jest następne
 
-- Rozpocząć Milestone 6: start od wybranego utworu, kolejka i podstawowe sterowanie.
-- Przed milestone’ami sterowania odtwarzaniem uwzględnić ograniczenie `album_track_expansion=0` dla Favorites Apple Music.
+- Rozpocząć Milestone 7: tryby pętli i lokalny pasek postępu.
+- Jeśli narzędzie `@Browser` będzie dostępne w kolejnej sesji, można powtórzyć UI smoke kliknięcia przycisku `Odtworz album`; aktualna walidacja potwierdza ścieżkę przez HTTP i SoCo, bo `tool_search` nie udostępnił Browser callable tool.
 
 ## Walidacja
 
@@ -80,6 +83,14 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Milestone 5 poprawki po self-review | `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; `@Browser` smoke aktywnych kontrolek głośności/mute | PASS | 35 testów PASS; suwak głośności i przycisk mute są aktywne w widoku albumu, `Mute` przełącza się lokalnie na `Unmute`; README i handoff zostały uzupełnione. |
 | 2026-05-23 | Finalizacja Milestone 5 przed commitem | `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check` | PASS | 35 testów PASS; brak błędów whitespace w diffie. |
 | 2026-05-23 | Wrap-up po finalizacji Milestone 5 | `git status --short --branch`; `git log -1 --oneline --decorate` | PASS | Working tree czysty; `HEAD` i `origin/codex/milestone-5` wskazują commit `c29e929`. |
+| 2026-05-23 | Milestone 6 implementacja lokalna | `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; smoke HTTP endpointów playback bez `SONOS_SPEAKER_IP`; `@Browser` smoke renderu UI | PASS | 47 testów PASS; endpointy playback zwracają kontrolowane `not_configured` bez IP; Browser potwierdził render aplikacji i nieaktywne przyciski playera przed wyborem utworu. |
+| 2026-05-23 | Milestone 6 realny test E2E z Sonos Era 300 | `SONOS_SPEAKER_IP=192.168.0.172 uv run uvicorn ...`; `@Browser` na `http://127.0.0.1:8000`; kliknięcie albumu `[VirtuouS] - EP`; skan endpointów szczegółów dla 64 albumów; `POST /api/playback/start` dla realnego albumu; odczyt kolejki SoCo | FAIL | Aplikacja widzi 64 albumy i realnego Sonosa, ale wszystkie szczegóły albumów zwracają `tracks_unavailable`/0 utworów. UI nie ma klikalnego utworu, `POST /api/playback/start` zwraca `status: empty`, a kolejka Sonosa pozostaje bez zmian. |
+| 2026-05-23 | Poprawki po self-review Milestone 6 | Próba bezpośredniego `speaker.add_to_queue(album_favorite)` na realnym Sonosie; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; `node --check src/sonos_album_controller/static/app.js`; `uv run python -m py_compile ...` | PARTIAL | Prosta alternatywa dodania albumowego favorite do kolejki zwróciła UPnP 800, więc nie wdrożono jej jako fikcyjnej naprawy. Poprawiono stan `next` i README; główny blocker listy utworów pozostaje. |
+| 2026-05-23 | Alternatywna ścieżka P1 dla Milestone 6 | Introspekcja realnego albumu `[VirtuouS] - EP`; `MusicLibrary.browse` dla `FV:2/15`, `1004206calbum%3A1755345446` i albumowego URI; bezpośrednie `AddURIToQueue` z albumowym URI/metadanymi; HTTP `POST /api/playback/start`; odczyt kolejki SoCo | PASS | Browse nadal zwraca 0 utworów, ale `AddURIToQueue(album.uri, resource_meta_data)` dodało 5 tracków. Po wdrożeniu fallbacku endpoint startu zwrócił `ok`, kolejka Sonosa zawiera 5 utworów albumu, a aktualny track to `Intro : 7' Dreamcatcher`. `@Browser` był niedostępny przez `tool_search`, więc UI kliknięcia zweryfikowano pośrednio HTTP/SoCo. |
+| 2026-05-23 | Poprawki po self-review fallbacku Milestone 6 | Odczyt kolejki po fallbackowym `AddURIToQueue`; aktualizacja UI na podstawie `tracks` z raportu playback; `uv run python -m unittest tests.test_playback tests.test_app_smoke`; `node --check src/sonos_album_controller/static/app.js`; `uv run python -m py_compile ...` | PASS | Backend zwraca tracklistę z kolejki Sonosa po uruchomieniu albumu bez listy z `MusicLibrary.browse`; UI renderuje te utwory i przechodzi na normalną ścieżkę indeksów next/previous. |
+| 2026-05-23 | Realna walidacja fallbacku z odczytem kolejki | `SONOS_SPEAKER_IP=192.168.0.172 uv run uvicorn ...`; HTTP `GET /api/albums`; HTTP `GET /api/albums/{album_id}`; HTTP `POST /api/playback/start`; odczyt kolejki SoCo; `speaker.pause()` po teście | PASS | Szczegół albumu nadal zwraca `tracks_unavailable`, ale start fallbacku zwraca `status: ok`, `tracks` z 5 pozycjami (`Intro : 7' Dreamcatcher`, `JUSTICE`, `STΦMP!`, `2 Rings`, `Fireflies`) i `state.track` ustawiony na pierwszy utwór. Kolejka Sonosa ma te same 5 pozycji; po teście głośnik zostawiono w `PAUSED_PLAYBACK`. |
+| 2026-05-23 | Finalizacja Milestone 6 przed commitem | `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; `node --check src/sonos_album_controller/static/app.js`; `uv run python -m py_compile src/sonos_album_controller/playback.py src/sonos_album_controller/main.py src/sonos_album_controller/albums.py` | PASS | 51 testów PASS; brak błędów whitespace; składnia JS i Python poprawna. |
+| 2026-05-23 | Wrap-up po finalizacji Milestone 6 | `git status --short --branch`; `git log -1 --oneline --decorate` | PASS | Working tree czysty; `HEAD` i `origin/codex/milestone-6` wskazują commit `6cc3280`. |
 
 ## Review
 
@@ -96,6 +107,8 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Self-review Milestone 4 po poprawkach | PASS | brak | Finalizacja operacyjna, commit i push. |
 | 2026-05-23 | Self-review Milestone 5 | P2 | Kontrolki głośności/mute były nieaktywne mimo DoD; README nie dokumentował endpointu szczegółu albumu; STATUS miał nieaktualny handoff | Poprawki wdrożone; wykonano ponowny self-review przed finalizacją. |
 | 2026-05-23 | Self-review Milestone 5 po poprawkach | PASS | brak | Finalizacja operacyjna, commit i push. |
+| 2026-05-23 | Self-review Milestone 6 | P1/P2/P3 | Fallback nie zwracał tracklisty z kolejki do UI; next/previous traciły synchronizację indeksu; `STATUS.md` miał sprzeczny handoff i brak wpisu błędu Browser | Poprawki wdrożone; wykonano ponowny self-review przed finalizacją. |
+| 2026-05-23 | Self-review Milestone 6 po poprawkach | PASS | brak | Finalizacja operacyjna, commit i push. |
 
 ## Błędy narzędzi i odzyskiwanie
 
@@ -114,6 +127,7 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 | 2026-05-23 | `apply_patch` dla dużego hunka `static/app.js` | InvalidArguments | Patch nie dopasował kontekstu w pliku JS | Rozbito zmianę na mniejsze hunki `apply_patch` | nie |
 | 2026-05-23 | Smoke HTTP Milestone 5 | UnexpectedEnvironment | Proces serwera odziedziczył `SONOS_SPEAKER_IP` i pobrał realne albumy zamiast izolowanego cache | Zatrzymano serwer, uruchomiono ponownie z jawnie pustym `SONOS_SPEAKER_IP=` i odtworzono temp cache | nie |
 | 2026-05-23 | Browser smoke poprawek Milestone 5 | UnexpectedEnvironment | Utrzymywany uchwyt zakładki nie należał już do aktywnej sesji Browser | Utworzono nową zakładkę w `@Browser` i powtórzono smoke kontrolek | nie |
+| 2026-05-23 | `tool_search` dla Browser przy fallbacku Milestone 6 | UnexpectedEnvironment | Wyszukiwanie nie udostępniło callable tool dla `@Browser` mimo dostępnego pluginu | Zastąpiono walidacją HTTP przez uruchomiony `uvicorn` i odczytem kolejki SoCo; problem odnotowano do powtórzenia UI smoke, gdy Browser będzie dostępny | nie |
 
 ## Keep rate / trwałość zmian
 
@@ -128,6 +142,7 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 | 2026-05-23 | Milestone 3 albumy z Favorites i ekran główny | `src/`, `tests/`, `README.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review | Poprawki ograniczyły się do scalania bogatszych metadanych okładek i dokumentacji operacyjnej; frontend bez nowych zależności i testy bez realnego Sonosa zostały utrzymane. |
 | 2026-05-23 | Milestone 4 cache albumów i odświeżanie danych | `src/`, `tests/`, `README.md`, `spec.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review | Poprawki ograniczyły się do ostrzeżenia UI dla pustego cache i odporności na błąd zapisu cache; zakres milestone’u, brak nowych zależności i testy bez realnego Sonosa zostały utrzymane. |
 | 2026-05-23 | Milestone 5 widok albumu i player bez odtwarzania | `src/`, `tests/`, `README.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review | Poprawki po self-review ograniczyły się do aktywnych lokalnie kontrolek głośności/mute, dokumentacji endpointu szczegółu albumu i aktualizacji handoffu; ponowny self-review nie wykrył problemów krytycznych. |
+| 2026-05-23 | Milestone 6 playback, kolejka i podstawowe sterowanie | `src/`, `tests/`, `README.md`, `spec.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review | Poprawki po review ograniczyły się do synchronizacji `next`, fallbacku `AddURIToQueue`, odczytu tracklisty z kolejki Sonosa i spójnej dokumentacji; finalny self-review nie wykrył problemów krytycznych. |
 
 ## Blokery i ryzyka
 
@@ -135,13 +150,15 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - Lokalizacja logów została ustalona na `~/.sonos-album-controller/logs/app.log`, z opcjonalnym `SONOS_LOG_PATH`.
 - Lokalizacja cache została ustalona na `~/.sonos-album-controller/cache/albums.json`, z opcjonalnym `SONOS_CACHE_PATH`.
 - Ręczny smoke Milestone 3 z realnym Sonos Era 300 został wykonany dla `SONOS_SPEAKER_IP=192.168.0.172`; UI pokazał 64 albumy. Realne dane SoCo zawierają `album_art_uri` w typed Favorites, ale nie zawierają wykonawcy ani daty dodania dla tych albumów.
+- Milestone 6 ma potwierdzone ograniczenie integracyjne: `MusicLibrary.browse` zwraca 0 utworów dla wszystkich 64 albumów Apple Music Favorites, więc lista utworów nie jest dostępna przed załadowaniem albumu do kolejki.
+- Próba bezpośredniego `speaker.add_to_queue(album_favorite)` dla realnego albumu `[VirtuouS] - EP` zwróciła UPnP 800, ale fallback `AddURIToQueue(album.uri, resource_meta_data)` działa i po załadowaniu pozwala odczytać utwory z kolejki Sonosa.
 
 ## Handoff do następnej sesji
 
-- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, a Milestone 5 ma zakończony widok albumu i player bez odtwarzania po pozytywnym self-review oraz finalizacji na gałęzi `codex/milestone-5`.
+- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, Milestone 5 ma zakończony widok albumu i player bez odtwarzania po finalizacji na gałęzi `codex/milestone-5`, a Milestone 6 ma zakończony playback z fallbackiem `AddURIToQueue` i odczytem tracklisty z kolejki Sonosa po starcie albumu.
 - Decyzje, których nie wolno zgubić: FastAPI + SoCo, statyczny frontend HTML/CSS/vanilla JS, jeden Sonos Era 300 po stałym IP z `SONOS_SPEAKER_IP`, cache albumów w `~/.sonos-album-controller/cache/albums.json` albo `SONOS_CACHE_PATH`, jakość audio best effort, testy automatyczne bez realnego Sonosa.
-- Pliki, które warto doczytać jako pierwsze: `AGENTS.md`, `STATUS.md`, `spec.md`, `ROADMAP.md`, `src/sonos_album_controller/album_detail.py`, `src/sonos_album_controller/albums.py`, `src/sonos_album_controller/static/app.js`, `tests/test_albums.py`, `tests/test_album_cache.py`.
-- Następny bezpieczny krok: rozpocząć Milestone 6 od kontraktu sprintu; przed pracą z listami utworów w sterowaniu odtwarzaniem uwzględnić ograniczenie `album_track_expansion=0` dla Favorites Apple Music.
+- Pliki, które warto doczytać jako pierwsze: `AGENTS.md`, `STATUS.md`, `spec.md`, `ROADMAP.md`, `src/sonos_album_controller/playback.py`, `src/sonos_album_controller/main.py`, `src/sonos_album_controller/static/app.js`, `tests/test_playback.py`, `tests/test_app_smoke.py`.
+- Następny bezpieczny krok: rozpocząć Milestone 7 od kontraktu sprintu dla trybów pętli i lokalnego paska postępu.
 - Czego nie robić: nie zaczynać pełnej integracji z Sonosem przed PoC z Milestone 1; nie dodawać zależności frontendowych bez potrzeby.
 
 ## Ostatnie aktualizacje
@@ -164,3 +181,10 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-23: Zaimplementowano Milestone 5 lokalnie: endpoint szczegółów albumu, próbę rozwijania listy utworów przez `MusicLibrary.browse`, widok albumu w UI, pusty player i powrót do albumów; milestone wymaga self-review.
 - 2026-05-23: Po self-review Milestone 5 uaktywniono lokalne kontrolki głośności/mute w stanie przygotowanym, uzupełniono README i handoff, a ponowny self-review zakończył się bez problemów krytycznych.
 - 2026-05-23: Sfinalizowano Milestone 5 commitem `c29e929` i pushem gałęzi `codex/milestone-5` do `origin`; wrap-up potwierdził czysty working tree.
+- 2026-05-23: Zaimplementowano Milestone 6 lokalnie: endpointy playback, serwis `playback.py`, mapowanie kolejki i komend Sonosa przez mocki, aktywne kontrolki playera w UI, dokumentację endpointów oraz walidacje automatyczne; milestone wymaga self-review i ręcznej walidacji na realnym Sonos Era 300.
+- 2026-05-23: Realny test E2E Milestone 6 przez `@Browser` z aktywnym `SONOS_SPEAKER_IP=192.168.0.172` wykazał, że aplikacja widzi 64 albumy, ale żaden nie rozwija się do listy utworów; `POST /api/playback/start` zwraca `empty`, a kolejka Sonosa pozostaje bez zmian.
+- 2026-05-23: Po self-review Milestone 6 poprawiono synchronizację indeksu po `next` na podstawie odpowiedzi backendu i doprecyzowano README. Sprawdzono prosty fallback `add_to_queue(album_favorite)`, ale realny Sonos zwrócił UPnP 800; główny blocker wymaga kolejnej decyzji technicznej.
+- 2026-05-23: Dla P1 znaleziono alternatywną ścieżkę: `MusicLibrary.browse` nadal nie daje listy utworów, ale bezpośrednie `AddURIToQueue` z albumowym URI i `resource_meta_data` z Favorites ładuje cały album do kolejki. Backend i UI dostały fallback `Odtworz album` dla albumów bez listy utworów; walidacja HTTP/SoCo na realnym Sonosie potwierdziła kolejkę 5 utworów.
+- 2026-05-23: Po kolejnym self-review fallback Milestone 6 został domknięty: backend zwraca tracklistę odczytaną z kolejki Sonosa po `AddURIToQueue`, a UI renderuje te utwory i używa normalnej ścieżki indeksów dla sterowania.
+- 2026-05-23: Self-review Milestone 6 po poprawkach zakończył się bez problemów krytycznych; dokumentacja operacyjna została przygotowana do commita i pusha.
+- 2026-05-23: Sfinalizowano Milestone 6 commitem `6cc3280` i pushem gałęzi `codex/milestone-6` do `origin`; wrap-up potwierdził czysty working tree.

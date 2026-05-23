@@ -3,12 +3,22 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from sonos_album_controller.album_detail import album_detail_report_to_dict, load_album_detail
 from sonos_album_controller.album_refresh import load_albums, refresh_albums
 from sonos_album_controller.albums import albums_report_to_dict
 from sonos_album_controller.config import load_config
 from sonos_album_controller.diagnostics import build_diagnostics, diagnostics_to_dict, test_sonos_connection
+from sonos_album_controller.playback import (
+    playback_report_to_dict,
+    set_muted,
+    set_playback_playing,
+    set_volume,
+    skip_next,
+    skip_previous,
+    start_album_playback,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -16,6 +26,33 @@ STATIC_DIR = BASE_DIR / "static"
 
 app = FastAPI(title="Sonos Album Controller")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+class StartPlaybackRequest(BaseModel):
+    album_id: str
+    track_index: int
+
+
+class PlaybackStateRequest(BaseModel):
+    is_playing: bool
+
+
+class PreviousRequest(BaseModel):
+    current_index: int | None = 0
+    position_seconds: int = 0
+
+
+class NextRequest(BaseModel):
+    current_index: int | None = None
+    track_count: int | None = None
+
+
+class VolumeRequest(BaseModel):
+    volume: int
+
+
+class MuteRequest(BaseModel):
+    muted: bool
 
 
 @app.get("/")
@@ -51,6 +88,42 @@ def refresh_album_cache() -> dict[str, object]:
 def read_album_detail(album_id: str) -> dict[str, object]:
     report = load_album_detail(load_config(), album_id)
     return album_detail_report_to_dict(report)
+
+
+@app.post("/api/playback/start")
+def start_playback(request: StartPlaybackRequest) -> dict[str, object]:
+    report = start_album_playback(load_config(), request.album_id, request.track_index)
+    return playback_report_to_dict(report)
+
+
+@app.post("/api/playback/state")
+def update_playback_state(request: PlaybackStateRequest) -> dict[str, object]:
+    report = set_playback_playing(load_config(), request.is_playing)
+    return playback_report_to_dict(report)
+
+
+@app.post("/api/playback/next")
+def next_track(request: NextRequest) -> dict[str, object]:
+    report = skip_next(load_config(), request.current_index, request.track_count)
+    return playback_report_to_dict(report)
+
+
+@app.post("/api/playback/previous")
+def previous_track(request: PreviousRequest) -> dict[str, object]:
+    report = skip_previous(load_config(), request.current_index, request.position_seconds)
+    return playback_report_to_dict(report)
+
+
+@app.post("/api/playback/volume")
+def update_volume(request: VolumeRequest) -> dict[str, object]:
+    report = set_volume(load_config(), request.volume)
+    return playback_report_to_dict(report)
+
+
+@app.post("/api/playback/mute")
+def update_mute(request: MuteRequest) -> dict[str, object]:
+    report = set_muted(load_config(), request.muted)
+    return playback_report_to_dict(report)
 
 
 @app.get("/api/diagnostics")

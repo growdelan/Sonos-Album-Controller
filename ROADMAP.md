@@ -288,7 +288,7 @@ Uwagi:
 
 ---
 
-## Milestone 6: Start od wybranego utworu, kolejka i podstawowe sterowanie (planned)
+## Milestone 6: Start od wybranego utworu, kolejka i podstawowe sterowanie (done)
 
 Cel:
 - umożliwić kliknięcie utworu, załadowanie całego albumu do kolejki Sonosa i rozpoczęcie odtwarzania od wybranego indeksu
@@ -330,6 +330,8 @@ Kontrakt sprintu:
 
 Uwagi:
 - milestone wysokiego ryzyka; wymaga osobnego kontraktu sprintu i review przed finalizacją
+- milestone zakończony po poprawkach self-review; endpointy playbacku, aktywny player, fallback `AddURIToQueue`, odczyt tracklisty z kolejki Sonosa i realna walidacja Sonos Era 300 zostały wykonane
+- realne Apple Music Favorites nie zwracają listy utworów przez `MusicLibrary.browse`; fallback Milestone 6 odtwarza cały album przez albumowe URI i metadane Favorites, a następnie odczytuje tracklistę z kolejki Sonosa, co zostało potwierdzone na realnym Sonos Era 300
 
 ---
 
