@@ -12,7 +12,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 ## Aktualny milestone / batch
 
 - Aktualny milestone: Milestone 7: Tryby pętli i lokalna predykcja postępu
-- Status: zakończony po pozytywnym self-review i sfinalizowany na gałęzi `codex/milestone-7`
+- Status: zakończony po pozytywnym self-review, sfinalizowany commitem `a6fd78d` i wypchnięty na `origin/codex/milestone-7`
 - Kontrakt sprintu: utworzony przed implementacją w odpowiedzi agenta; profil `openai_patch`, format patch/diff przez `apply_patch`
 - Zakres poza bieżącą pracą: ciągłe pollingowanie Sonosa, seek po pasku postępu, naprawianie rozjazdów po zmianach wykonanych poza aplikacją, badge jakości audio
 
@@ -97,7 +97,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Milestone 7 Browser smoke z fake backendem bez realnego Sonosa | `@Browser` na `http://127.0.0.1:8018` z tymczasowym backendem smoke; kliknięcie albumu, utworu i przycisku pętli | PASS | UI cyklicznie przełączył do `Petla 1`, pasek postępu pokazał `0:01 / 0:02` i `value=50`; po przełączeniu na brak pętli lokalna predykcja zakończyła album stanem `Koniec albumu`, `value=100`, przycisk `Play`. |
 | 2026-05-23 | Self-review Milestone 7 | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `git diff --check` | PASS | Self-review zakończony bez problemów krytycznych; 57 testów PASS, składnia JS poprawna, diff bez błędów whitespace. |
 | 2026-05-23 | Finalizacja Milestone 7 przed commitem | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `git diff --check` | PASS | 57 testów PASS; składnia JS poprawna; brak błędów whitespace w diffie. |
-| 2026-05-23 | Wrap-up po finalizacji Milestone 7 | `git status --short --branch`; `git log -1 --oneline --decorate` | PASS | Commit przygotowany na gałęzi `codex/milestone-7`; push do `origin` wykonany w kroku finalizacji. |
+| 2026-05-23 | Wrap-up po finalizacji Milestone 7 | `git status --short --branch`; `git log -1 --oneline --decorate` | PASS | Working tree czysty; `HEAD` i `origin/codex/milestone-7` wskazują commit `a6fd78d`. |
 
 ## Review
 
@@ -200,4 +200,4 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-23: Sfinalizowano Milestone 6 commitem `6cc3280` i pushem gałęzi `codex/milestone-6` do `origin`; wrap-up potwierdził czysty working tree.
 - 2026-05-23: Zaimplementowano Milestone 7 lokalnie: tryby pętli `none` / `album` / `track`, endpoint `POST /api/playback/repeat`, logikę next/previous respektującą pętlę, przycisk pętli w UI oraz lokalny pasek postępu z predykcją końca utworu i stanem `Koniec albumu`; milestone wymaga self-review.
 - 2026-05-23: Self-review Milestone 7 zakończył się bez problemów krytycznych; dokumentacja operacyjna została przygotowana do commita i pusha.
-- 2026-05-23: Sfinalizowano Milestone 7 commitem na gałęzi `codex/milestone-7` i przygotowano push do `origin`.
+- 2026-05-23: Sfinalizowano Milestone 7 commitem `a6fd78d` i pushem gałęzi `codex/milestone-7` do `origin`; wrap-up potwierdził czysty working tree.
