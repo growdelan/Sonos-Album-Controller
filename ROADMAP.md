@@ -335,7 +335,7 @@ Uwagi:
 
 ---
 
-## Milestone 7: Tryby pętli i lokalna predykcja postępu (planned)
+## Milestone 7: Tryby pętli i lokalna predykcja postępu (done)
 
 Cel:
 - dodać trzy tryby pętli oraz lokalny pasek postępu, który przewiduje przejścia między utworami bez ciągłego odpytywania Sonosa
@@ -376,6 +376,7 @@ Kontrakt sprintu:
 
 Uwagi:
 - milestone wymaga osobnego kontraktu sprintu i review przed finalizacją, bo dotyka spójności UI z rzeczywistą kolejką Sonosa
+- milestone zakończony po pozytywnym self-review; tryby pętli, backendowe ustawianie `play_mode`, lokalny pasek postępu i stan `Koniec albumu` zostały zweryfikowane testami automatycznymi oraz Browser smoke z fake backendem
 
 ---
 

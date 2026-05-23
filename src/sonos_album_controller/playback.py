@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import Any, Literal
 
 from soco import SoCo
 from soco.music_library import MusicLibrary
@@ -17,6 +17,9 @@ from sonos_album_controller.albums import (
 from sonos_album_controller.config import AppConfig, SONOS_SPEAKER_IP_ENV
 
 
+RepeatMode = Literal["none", "album", "track"]
+
+
 @dataclass(frozen=True)
 class PlayerState:
     album: Album | None
@@ -25,6 +28,7 @@ class PlayerState:
     is_playing: bool
     volume: int | None = None
     muted: bool | None = None
+    repeat_mode: RepeatMode = "none"
 
 
 @dataclass(frozen=True)
@@ -124,22 +128,33 @@ def skip_next(
     config: AppConfig,
     current_index: int | None = None,
     track_count: int | None = None,
+    repeat_mode: RepeatMode = "none",
     speaker_factory: SpeakerFactory = SoCo,
 ) -> PlaybackReport:
+    if repeat_mode not in ("none", "album", "track"):
+        return PlaybackReport(status="invalid_request", message="Nieprawidlowy tryb petli.")
+
     speaker_report = _speaker_from_config(config, speaker_factory)
     if speaker_report.status != "ok":
         return PlaybackReport(status=speaker_report.status, message=speaker_report.message)
 
     assert speaker_report.speaker is not None
     try:
-        speaker_report.speaker.next()
+        next_index = _next_index(current_index, track_count, repeat_mode)
+        if repeat_mode == "track" and current_index is not None:
+            speaker_report.speaker.play_from_queue(max(current_index, 0))
+        elif repeat_mode == "album" and current_index is not None and next_index == 0:
+            speaker_report.speaker.play_from_queue(0)
+        elif repeat_mode == "none" and current_index is not None and next_index == current_index:
+            pass
+        else:
+            speaker_report.speaker.next()
     except Exception as error:
         return PlaybackReport(status="error", message=f"Nie udalo sie przejsc do nastepnego utworu: {error}")
 
-    next_index = _next_index(current_index, track_count)
     return PlaybackReport(
         status="ok",
-        state=PlayerState(None, None, next_index, is_playing=True),
+        state=PlayerState(None, None, next_index, is_playing=True, repeat_mode=repeat_mode),
     )
 
 
@@ -147,8 +162,13 @@ def skip_previous(
     config: AppConfig,
     current_index: int | None,
     position_seconds: int,
+    track_count: int | None = None,
+    repeat_mode: RepeatMode = "none",
     speaker_factory: SpeakerFactory = SoCo,
 ) -> PlaybackReport:
+    if repeat_mode not in ("none", "album", "track"):
+        return PlaybackReport(status="invalid_request", message="Nieprawidlowy tryb petli.")
+
     speaker_report = _speaker_from_config(config, speaker_factory)
     if speaker_report.status != "ok":
         return PlaybackReport(status=speaker_report.status, message=speaker_report.message)
@@ -157,17 +177,54 @@ def skip_previous(
     try:
         if current_index is None:
             speaker_report.speaker.previous()
-            return PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=True))
+            return PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=True, repeat_mode=repeat_mode))
         if position_seconds > 10:
             speaker_report.speaker.play_from_queue(max(current_index, 0))
-            return PlaybackReport(status="ok", state=PlayerState(None, None, max(current_index, 0), is_playing=True))
+            return PlaybackReport(
+                status="ok",
+                state=PlayerState(None, None, max(current_index, 0), is_playing=True, repeat_mode=repeat_mode),
+            )
+        if repeat_mode == "track":
+            speaker_report.speaker.play_from_queue(max(current_index, 0))
+            return PlaybackReport(
+                status="ok",
+                state=PlayerState(None, None, max(current_index, 0), is_playing=True, repeat_mode=repeat_mode),
+            )
         if current_index <= 0:
-            return PlaybackReport(status="ok", state=PlayerState(None, None, 0, is_playing=True))
+            if repeat_mode == "album" and track_count is not None and track_count > 0:
+                last_index = track_count - 1
+                speaker_report.speaker.play_from_queue(last_index)
+                return PlaybackReport(
+                    status="ok",
+                    state=PlayerState(None, None, last_index, is_playing=True, repeat_mode=repeat_mode),
+                )
+            return PlaybackReport(status="ok", state=PlayerState(None, None, 0, is_playing=True, repeat_mode=repeat_mode))
         speaker_report.speaker.previous()
     except Exception as error:
         return PlaybackReport(status="error", message=f"Nie udalo sie przejsc do poprzedniego utworu: {error}")
 
-    return PlaybackReport(status="ok", state=PlayerState(None, None, current_index - 1, is_playing=True))
+    return PlaybackReport(status="ok", state=PlayerState(None, None, current_index - 1, is_playing=True, repeat_mode=repeat_mode))
+
+
+def set_repeat_mode(
+    config: AppConfig,
+    repeat_mode: RepeatMode,
+    speaker_factory: SpeakerFactory = SoCo,
+) -> PlaybackReport:
+    if repeat_mode not in ("none", "album", "track"):
+        return PlaybackReport(status="invalid_request", message="Nieprawidlowy tryb petli.")
+
+    speaker_report = _speaker_from_config(config, speaker_factory)
+    if speaker_report.status != "ok":
+        return PlaybackReport(status=speaker_report.status, message=speaker_report.message)
+
+    assert speaker_report.speaker is not None
+    try:
+        speaker_report.speaker.play_mode = _sonos_play_mode(repeat_mode)
+    except Exception as error:
+        return PlaybackReport(status="error", message=f"Nie udalo sie ustawic trybu petli: {error}")
+
+    return PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=False, repeat_mode=repeat_mode))
 
 
 def set_volume(config: AppConfig, volume: int, speaker_factory: SpeakerFactory = SoCo) -> PlaybackReport:
@@ -357,10 +414,22 @@ def _safe_bool(value: Any) -> bool | None:
     return bool(value)
 
 
-def _next_index(current_index: int | None, track_count: int | None) -> int | None:
+def _next_index(current_index: int | None, track_count: int | None, repeat_mode: RepeatMode = "none") -> int | None:
     if current_index is None:
         return None
+    if repeat_mode == "track":
+        return current_index
     next_index = current_index + 1
     if track_count is None or track_count <= 0:
         return next_index
+    if next_index >= track_count and repeat_mode == "album":
+        return 0
     return min(next_index, track_count - 1)
+
+
+def _sonos_play_mode(repeat_mode: RepeatMode) -> str:
+    return {
+        "none": "NORMAL",
+        "album": "REPEAT_ALL",
+        "track": "REPEAT_ONE",
+    }[repeat_mode]

@@ -14,6 +14,7 @@ from sonos_album_controller.playback import (
     playback_report_to_dict,
     set_muted,
     set_playback_playing,
+    set_repeat_mode,
     set_volume,
     skip_next,
     skip_previous,
@@ -40,11 +41,18 @@ class PlaybackStateRequest(BaseModel):
 class PreviousRequest(BaseModel):
     current_index: int | None = 0
     position_seconds: int = 0
+    track_count: int | None = None
+    repeat_mode: str = "none"
 
 
 class NextRequest(BaseModel):
     current_index: int | None = None
     track_count: int | None = None
+    repeat_mode: str = "none"
+
+
+class RepeatRequest(BaseModel):
+    repeat_mode: str
 
 
 class VolumeRequest(BaseModel):
@@ -104,13 +112,25 @@ def update_playback_state(request: PlaybackStateRequest) -> dict[str, object]:
 
 @app.post("/api/playback/next")
 def next_track(request: NextRequest) -> dict[str, object]:
-    report = skip_next(load_config(), request.current_index, request.track_count)
+    report = skip_next(load_config(), request.current_index, request.track_count, request.repeat_mode)
     return playback_report_to_dict(report)
 
 
 @app.post("/api/playback/previous")
 def previous_track(request: PreviousRequest) -> dict[str, object]:
-    report = skip_previous(load_config(), request.current_index, request.position_seconds)
+    report = skip_previous(
+        load_config(),
+        request.current_index,
+        request.position_seconds,
+        request.track_count,
+        request.repeat_mode,
+    )
+    return playback_report_to_dict(report)
+
+
+@app.post("/api/playback/repeat")
+def update_repeat_mode(request: RepeatRequest) -> dict[str, object]:
+    report = set_repeat_mode(load_config(), request.repeat_mode)
     return playback_report_to_dict(report)
 
 

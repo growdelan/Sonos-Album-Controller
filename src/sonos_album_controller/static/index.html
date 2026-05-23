@@ -61,7 +61,12 @@
                         <button id="previous-control-button" type="button" disabled>Poprzedni</button>
                         <button id="play-pause-control-button" type="button" disabled>Play</button>
                         <button id="next-control-button" type="button" disabled>Nastepny</button>
-                        <button type="button" disabled>Petla</button>
+                        <button id="repeat-control-button" class="repeat-mode-none" type="button" disabled aria-label="Tryb petli" aria-pressed="false">Petla</button>
+                    </div>
+                    <div class="progress-panel" aria-label="Postep utworu">
+                        <span id="progress-current-time">0:00</span>
+                        <progress id="track-progress" value="0" max="100"></progress>
+                        <span id="progress-duration">0:00</span>
                     </div>
                     <div class="volume-controls">
                         <label for="volume-control">Glosnosc</label>

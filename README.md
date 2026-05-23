@@ -36,8 +36,9 @@ Endpointy:
 - `GET /api/albums/{album_id}` - zwraca szczegóły albumu, listę utworów jeśli SoCo potrafi ją rozwinąć oraz czytelny komunikat, gdy lista utworów jest niedostępna.
 - `POST /api/playback/start` - czyści kolejkę, ładuje cały album i startuje od wybranego indeksu utworu; gdy Sonos nie zwraca listy utworów, uruchamia cały album przez albumowe URI i metadane z Favorites, a następnie odczytuje listę utworów z kolejki Sonosa.
 - `POST /api/playback/state` - wznawia albo pauzuje odtwarzanie.
-- `POST /api/playback/next` - przechodzi do następnego utworu.
-- `POST /api/playback/previous` - obsługuje poprzedni utwór z regułą 10 sekund.
+- `POST /api/playback/next` - przechodzi do następnego utworu i respektuje tryb pętli przekazany przez UI.
+- `POST /api/playback/previous` - obsługuje poprzedni utwór z regułą 10 sekund i pętlą albumu.
+- `POST /api/playback/repeat` - ustawia tryb pętli Sonosa: `none`, `album` albo `track`.
 - `POST /api/playback/volume` - ustawia głośność w zakresie 0-100.
 - `POST /api/playback/mute` - ustawia mute/unmute.
 - `GET /api/diagnostics` - zwraca skonfigurowane IP, status połączenia, ostatni błąd i stan cache.
