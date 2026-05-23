@@ -6,6 +6,7 @@ from typing import Any, Callable
 from soco import SoCo
 from soco.music_library import MusicLibrary
 
+from sonos_album_controller.app_logging import get_app_logger
 from sonos_album_controller.config import AppConfig, SONOS_SPEAKER_IP_ENV
 
 
@@ -216,7 +217,9 @@ def fetch_albums(
     music_library_factory: MusicLibraryFactory = MusicLibrary,
     favorites_limit: int = 100,
 ) -> AlbumsReport:
+    logger = get_app_logger(config.log_path)
     if config.sonos_speaker_ip is None:
+        logger.warning("Brak konfiguracji IP glosnika przy pobieraniu albumow.")
         return AlbumsReport(
             status="not_configured",
             albums=[],
@@ -228,10 +231,11 @@ def fetch_albums(
     try:
         speaker = speaker_factory(config.sonos_speaker_ip)
     except Exception as error:
+        logger.error("Nie udalo sie polaczyc z Sonos przy pobieraniu albumow: %s", error)
         return AlbumsReport(
             status="error",
             albums=[],
-            message=f"Nie udalo sie polaczyc z Sonos: {error}",
+            message="Nie mozna polaczyc sie z Sonos. Sprawdz, czy glosnik jest wlaczony i czy IP jest poprawne.",
         )
 
     try:
@@ -242,6 +246,7 @@ def fetch_albums(
             )
     except Exception as error:
         errors.append(str(error))
+        logger.warning("Nie udalo sie pobrac legacy Sonos Favorites: %s", error)
 
     try:
         library = music_library_factory(speaker)
@@ -249,12 +254,14 @@ def fetch_albums(
         favorite_items.extend(list(_iter_search_result_items(typed_result)))
     except Exception as error:
         errors.append(str(error))
+        logger.warning("Nie udalo sie pobrac typowanych Sonos Favorites: %s", error)
 
     if errors and not favorite_items:
+        logger.error("Nie udalo sie pobrac albumow z Sonos Favorites: %s", "; ".join(errors))
         return AlbumsReport(
             status="error",
             albums=[],
-            message=f"Nie udalo sie pobrac albumow z Sonos Favorites: {'; '.join(errors)}",
+            message="Nie udalo sie odswiezyc albumow z Sonosa. Sprawdz polaczenie i sproboj ponownie.",
         )
 
     albums = _sort_albums(_dedupe_albums([album for item in favorite_items if (album := normalize_album(item))]))
@@ -275,7 +282,9 @@ def fetch_album_tracks(
     music_library_factory: MusicLibraryFactory = MusicLibrary,
     favorites_limit: int = 100,
 ) -> TracksReport:
+    logger = get_app_logger(config.log_path)
     if config.sonos_speaker_ip is None:
+        logger.warning("Brak konfiguracji IP glosnika przy pobieraniu listy utworow.")
         return TracksReport(
             status="not_configured",
             tracks=[],
@@ -287,10 +296,11 @@ def fetch_album_tracks(
         library = music_library_factory(speaker)
         typed_result = library.get_sonos_favorites(max_items=favorites_limit)
     except Exception as error:
+        logger.error("Nie udalo sie pobrac Favorites przy pobieraniu listy utworow: %s", error)
         return TracksReport(
             status="error",
             tracks=[],
-            message=f"Nie udalo sie pobrac Favorites z Sonosa: {error}",
+            message="Nie udalo sie pobrac listy utworow. Sprawdz polaczenie z Sonos i sproboj ponownie.",
         )
 
     album_item = None
@@ -310,10 +320,11 @@ def fetch_album_tracks(
     try:
         browse_result = library.browse(album_item, max_items=favorites_limit)
     except Exception as error:
+        logger.error("Nie udalo sie rozwinac albumu do listy utworow: %s", error)
         return TracksReport(
             status="error",
             tracks=[],
-            message=f"Nie udalo sie pobrac listy utworow albumu: {error}",
+            message="Nie udalo sie pobrac listy utworow dla tego albumu. Mozesz sprobowac odtworzyc caly album.",
         )
 
     tracks = [
@@ -325,7 +336,7 @@ def fetch_album_tracks(
         return TracksReport(
             status="empty",
             tracks=[],
-            message="Sonos nie zwrocil listy utworow dla tego albumu.",
+            message="Sonos nie udostepnia listy utworow przed odtworzeniem tego albumu. Mozesz uruchomic caly album.",
         )
     return TracksReport(status="ok", tracks=tracks)
 

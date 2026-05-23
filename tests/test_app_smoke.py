@@ -150,6 +150,7 @@ class AppSmokeTest(unittest.TestCase):
         self.assertEqual(body["status"], "ok")
         self.assertEqual(body["state"]["track"]["title"], "Second")
         self.assertTrue(body["state"]["is_playing"])
+        self.assertIsNone(body["state"]["audio_quality"])
 
     def test_playback_volume_endpoint_uses_playback_service(self) -> None:
         report = PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=False, volume=55))
@@ -192,6 +193,7 @@ class AppSmokeTest(unittest.TestCase):
         self.assertIn("Sonos Album Controller", response.text)
         self.assertIn("Odswiez albumy", response.text)
         self.assertIn("play-pause-control-button", response.text)
+        self.assertIn("audio-quality-badge", response.text)
         self.assertIn("/static/app.js", response.text)
 
 

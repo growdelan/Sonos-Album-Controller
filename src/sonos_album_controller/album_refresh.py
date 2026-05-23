@@ -3,6 +3,7 @@ from soco.music_library import MusicLibrary
 
 from sonos_album_controller.album_cache import read_album_cache, write_album_cache
 from sonos_album_controller.albums import AlbumsReport, MusicLibraryFactory, SpeakerFactory, fetch_albums
+from sonos_album_controller.app_logging import get_app_logger
 from sonos_album_controller.config import AppConfig
 
 
@@ -11,6 +12,7 @@ def load_albums(
     speaker_factory: SpeakerFactory = SoCo,
     music_library_factory: MusicLibraryFactory = MusicLibrary,
 ) -> AlbumsReport:
+    logger = get_app_logger(config.log_path)
     report = fetch_albums(
         config,
         speaker_factory=speaker_factory,
@@ -23,7 +25,8 @@ def load_albums(
             message = report.message
         except OSError as error:
             last_refresh = None
-            message = f"Nie udalo sie zapisac cache albumow: {error}"
+            logger.error("Nie udalo sie zapisac cache albumow: %s", error)
+            message = "Albumy zostaly pobrane, ale nie udalo sie zapisac lokalnego cache."
         return AlbumsReport(
             status="ok",
             albums=report.albums,

@@ -1,8 +1,8 @@
 :root {
-    color-scheme: light;
+    color-scheme: dark;
     font-family: Arial, Helvetica, sans-serif;
-    background: #f4f6f8;
-    color: #17202a;
+    background: #101114;
+    color: #f3f0e8;
 }
 
 * {
@@ -10,6 +10,9 @@
 }
 
 body {
+    background:
+        linear-gradient(180deg, rgba(35, 37, 43, 0.95), rgba(16, 17, 20, 1) 34%),
+        #101114;
     margin: 0;
     min-height: 100vh;
 }
@@ -21,15 +24,16 @@ body {
 }
 
 .status-panel {
-    border: 1px solid #d8dee6;
+    border: 1px solid #343842;
     border-radius: 8px;
-    background: #ffffff;
+    background: #191b20;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
     padding: 32px;
 }
 
 .eyebrow {
     margin: 0 0 8px;
-    color: #47606f;
+    color: #9fd2c8;
     font-size: 0.9rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -45,7 +49,7 @@ h1 {
 .panel-message {
     margin: 18px 0 28px;
     max-width: 680px;
-    color: #304351;
+    color: #c9c3b8;
     font-size: 1.1rem;
     line-height: 1.5;
 }
@@ -58,13 +62,14 @@ h1 {
 }
 
 .status-grid div {
-    border: 1px solid #e2e7ed;
+    border: 1px solid #343842;
     border-radius: 8px;
+    background: #20232a;
     padding: 16px;
 }
 
 dt {
-    color: #526b7a;
+    color: #9a958d;
     font-size: 0.85rem;
     font-weight: 700;
 }
@@ -83,10 +88,10 @@ dd {
 }
 
 button {
-    border: 1px solid #234357;
+    border: 1px solid #d3a84f;
     border-radius: 8px;
-    background: #234357;
-    color: #ffffff;
+    background: #d3a84f;
+    color: #15130f;
     cursor: pointer;
     font: inherit;
     font-weight: 700;
@@ -94,30 +99,31 @@ button {
 }
 
 button:hover {
-    background: #172f3f;
+    background: #e3bd65;
 }
 
 button:disabled,
 button:disabled:hover {
-    background: #d6dde3;
-    border-color: #c2ccd5;
-    color: #526b7a;
+    background: #2a2d34;
+    border-color: #3a3e48;
+    color: #716d66;
     cursor: not-allowed;
 }
 
 .secondary-button {
-    background: #ffffff;
-    color: #234357;
+    background: #191b20;
+    border-color: #4a4f5c;
+    color: #f3f0e8;
 }
 
 .secondary-button:hover {
-    background: #edf3f7;
+    background: #242831;
 }
 
 .albums-panel,
 .album-detail-panel,
 .diagnostics-panel {
-    border-top: 1px solid #e2e7ed;
+    border-top: 1px solid #343842;
     margin-top: 28px;
     padding-top: 24px;
 }
@@ -130,7 +136,7 @@ button:disabled:hover {
 }
 
 .section-heading p {
-    color: #526b7a;
+    color: #9a958d;
     font-size: 0.95rem;
     font-weight: 700;
     margin: 0;
@@ -148,10 +154,10 @@ h2 {
 }
 
 .album-card {
-    border: 1px solid #e2e7ed;
+    border: 1px solid #343842;
     border-radius: 8px;
     overflow: hidden;
-    background: #ffffff;
+    background: #20232a;
     color: inherit;
     cursor: pointer;
     display: block;
@@ -162,15 +168,15 @@ h2 {
 }
 
 .album-card:hover {
-    background: #f7fafc;
-    border-color: #b9c6d1;
+    background: #272b33;
+    border-color: #d3a84f;
 }
 
 .album-cover {
     align-items: center;
     aspect-ratio: 1;
-    background: #dfe7ee;
-    color: #47606f;
+    background: #2b3038;
+    color: #9a958d;
     display: flex;
     font-weight: 700;
     justify-content: center;
@@ -192,7 +198,7 @@ h2 {
 }
 
 .album-card p {
-    color: #526b7a;
+    color: #b7b0a5;
     line-height: 1.4;
     margin: 0 14px 14px;
     overflow-wrap: anywhere;
@@ -208,9 +214,9 @@ h2 {
 .album-detail-cover {
     align-items: center;
     aspect-ratio: 1;
-    background: #dfe7ee;
+    background: #2b3038;
     border-radius: 8px;
-    color: #47606f;
+    color: #9a958d;
     display: flex;
     font-weight: 700;
     justify-content: center;
@@ -233,7 +239,7 @@ h2 {
 }
 
 .album-detail-artist {
-    color: #526b7a;
+    color: #b7b0a5;
     font-size: 1.1rem;
     font-weight: 700;
     margin: 0;
@@ -267,9 +273,9 @@ h2 {
 
 .track-button {
     align-items: center;
-    border: 1px solid #e2e7ed;
+    border: 1px solid #343842;
     border-radius: 8px;
-    background: #ffffff;
+    background: #20232a;
     color: inherit;
     cursor: pointer;
     display: grid;
@@ -283,18 +289,18 @@ h2 {
 }
 
 .track-button:hover {
-    background: #f7fafc;
-    border-color: #b9c6d1;
+    background: #272b33;
+    border-color: #d3a84f;
 }
 
 .active-track .track-button {
-    border-color: #234357;
-    background: #edf3f7;
+    border-color: #d3a84f;
+    background: #2e2a1f;
 }
 
 .track-number,
 .track-duration {
-    color: #526b7a;
+    color: #9fd2c8;
     font-weight: 700;
 }
 
@@ -307,15 +313,35 @@ h2 {
 }
 
 .player-panel {
-    border: 1px solid #e2e7ed;
+    border: 1px solid #343842;
     border-radius: 8px;
+    background: #20232a;
     padding: 16px;
 }
 
 .player-state {
-    color: #304351;
+    color: #f3f0e8;
+    font-weight: 700;
+    margin: 0 0 12px;
+}
+
+.audio-quality-badge {
+    border: 1px solid #4a4f5c;
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.85rem;
     font-weight: 700;
     margin: 0 0 16px;
+    padding: 6px 10px;
+}
+
+.audio-quality-unavailable {
+    color: #b7b0a5;
+}
+
+.audio-quality-available {
+    border-color: #9fd2c8;
+    color: #9fd2c8;
 }
 
 .player-controls,
@@ -328,18 +354,20 @@ h2 {
 }
 
 .repeat-mode-none {
-    background: #ffffff;
-    color: #526b7a;
+    background: #191b20;
+    border-color: #4a4f5c;
+    color: #9a958d;
 }
 
 .repeat-mode-none:hover {
-    background: #edf3f7;
+    background: #242831;
 }
 
 .repeat-mode-album,
 .repeat-mode-track {
-    background: #234357;
-    color: #ffffff;
+    background: #257366;
+    border-color: #9fd2c8;
+    color: #f3f0e8;
 }
 
 .progress-panel {
@@ -347,7 +375,7 @@ h2 {
 }
 
 .progress-panel span {
-    color: #526b7a;
+    color: #9a958d;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
     min-width: 44px;
@@ -364,17 +392,17 @@ h2 {
 }
 
 .progress-panel progress::-webkit-progress-bar {
-    background: #d6dde3;
+    background: #30343d;
     border-radius: 999px;
 }
 
 .progress-panel progress::-webkit-progress-value {
-    background: #234357;
+    background: #9fd2c8;
     border-radius: 999px;
 }
 
 .progress-panel progress::-moz-progress-bar {
-    background: #234357;
+    background: #9fd2c8;
     border-radius: 999px;
 }
 
@@ -383,7 +411,7 @@ h2 {
 }
 
 .volume-controls label {
-    color: #526b7a;
+    color: #9a958d;
     font-weight: 700;
 }
 
@@ -399,8 +427,9 @@ h2 {
 }
 
 .diagnostics-grid div {
-    border: 1px solid #e2e7ed;
+    border: 1px solid #343842;
     border-radius: 8px;
+    background: #20232a;
     padding: 16px;
 }
 

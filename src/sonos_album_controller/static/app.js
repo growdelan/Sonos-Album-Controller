@@ -62,6 +62,14 @@ function setPlayerMessage(message) {
     document.querySelector("#player-state").textContent = message;
 }
 
+function setAudioQualityBadge(audioQuality) {
+    const badge = document.querySelector("#audio-quality-badge");
+    const quality = typeof audioQuality === "string" ? audioQuality.trim() : "";
+    badge.textContent = quality || "Jakosc niedostepna";
+    badge.classList.toggle("audio-quality-unavailable", !quality);
+    badge.classList.toggle("audio-quality-available", Boolean(quality));
+}
+
 function parseDurationSeconds(duration) {
     if (!duration || typeof duration !== "string") {
         return 0;
@@ -248,6 +256,7 @@ function resetPlayerState() {
     updatePlayPauseButton();
     updateRepeatButton();
     setPlayerMessage("Nic nie odtwarza");
+    setAudioQualityBadge(null);
     updateActiveTrack();
     updateProgressDisplay(0);
 }
@@ -422,6 +431,7 @@ async function startTrack(albumId, trackIndex) {
     try {
         const report = await postJson("/api/playback/start", { album_id: albumId, track_index: trackIndex });
         applyReportTracks(report);
+        setAudioQualityBadge(report.state ? report.state.audio_quality : null);
         if (report.state && report.state.track) {
             const nextIndex = Number.isInteger(report.state.track_index) ? report.state.track_index : trackIndex;
             setCurrentTrack(nextIndex, report.state.is_playing);
@@ -440,6 +450,7 @@ async function startAlbum(albumId) {
     try {
         const report = await postJson("/api/playback/start", { album_id: albumId, track_index: 0 });
         applyReportTracks(report);
+        setAudioQualityBadge(report.state ? report.state.audio_quality : null);
         if (report.state && report.state.track) {
             const nextIndex = Number.isInteger(report.state.track_index) ? report.state.track_index : 0;
             setCurrentTrack(nextIndex, report.state.is_playing);

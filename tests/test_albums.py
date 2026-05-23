@@ -207,15 +207,17 @@ class AlbumsTest(unittest.TestCase):
 
     def test_fetch_albums_reports_error_when_all_favorites_paths_fail(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "app.log"
             report = fetch_albums(
-                AppConfig(sonos_speaker_ip="192.0.2.20", log_path=Path(temp_dir) / "app.log"),
+                AppConfig(sonos_speaker_ip="192.0.2.20", log_path=log_path),
                 speaker_factory=FailingSpeaker,
                 music_library_factory=FailingMusicLibrary,
             )
 
-        self.assertEqual(report.status, "error")
-        self.assertEqual(report.albums, [])
-        self.assertIn("connection refused", report.message or "")
+            self.assertEqual(report.status, "error")
+            self.assertEqual(report.albums, [])
+            self.assertNotIn("connection refused", report.message or "")
+            self.assertIn("connection refused", log_path.read_text(encoding="utf-8"))
 
     def test_fetch_albums_keeps_legacy_albums_when_typed_favorites_fail(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
