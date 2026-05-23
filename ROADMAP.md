@@ -539,3 +539,63 @@ Uwagi:
 - zakres ocenia się jako mały/średni: zmiana dotyka istniejącego playbacku i UI tracklisty, ale nie wymaga nowych źródeł danych, zależności ani przebudowy całego interfejsu
 - istnieje ryzyko integracyjne SoCo dotyczące wyboru indeksu w kolejce; jeśli operacja nie będzie stabilna, implementacja musi zachować potwierdzony stan backendu i nie udawać udanego przeskoku w UI
 - milestone zakończony po pozytywnym self-review; tracklista pozwala wybrać widoczny utwór, a aktualnie grający utwór ma mały wskaźnik equalizera widoczny tylko w stanie odtwarzania
+
+---
+
+## Milestone 11: Artyści albumów z Apple Lookup (done)
+
+Cel:
+- uzupełnić nazwy artystów dla albumów Apple Music Favorites, dla których SoCo nie zwraca wykonawcy bezpośrednio
+- wykorzystać Apple album ID z metadanych Sonosa do best effort Apple/iTunes lookupu
+- poprawić premium UI przez usunięcie widocznego fallbacku `Wykonawca nieznany`
+
+Definition of Done:
+- backend potrafi wyciągnąć Apple album ID z metadanych typu `album%3A<id>` i `album:<id>`
+- album bez artysty z danych SoCo może dostać `artist` z Apple/iTunes lookupu
+- brak wyniku lookupu, brak sieci albo błąd lookupu nie blokuje listy albumów, cache ani odtwarzania
+- wzbogacony artysta zapisuje się i odczytuje z istniejącego cache albumów
+- publiczny kontrakt API albumów pozostaje kompatybilny: pole `artist` istnieje i jest uzupełniane, gdy dane są dostępne
+- kafelki albumów, widok albumu i dolny player nie pokazują tekstu `Wykonawca nieznany`
+- błędy lookupu nie są eksponowane w głównym UI; techniczne szczegóły mogą trafić do lokalnego logu
+- testy automatyczne używają mocka/stuba lookupu i nie wymagają realnego Sonosa ani niestabilnego zewnętrznego IO
+- nie dodano nowych zależności frontendowych ani nie zmieniono źródeł muzyki
+
+Zakres:
+- ekstrakcja Apple album ID z `resource_meta_data` albo URI zasobu Sonosa
+- mała warstwa wzbogacania metadanych albumu przez Apple/iTunes lookup
+- integracja wzbogacania z pobieraniem/odświeżaniem albumów i istniejącym cache
+- logowanie problemów lookupu bez pokazywania technicznych błędów w UI
+- aktualizacja statycznego frontendu, aby ukrywał pustą linię artysty i nie renderował `Wykonawca nieznany`
+- testy automatyczne ekstrakcji ID, wzbogacania artysty, fallbacków błędów, cache i statycznego kontraktu UI
+
+Poza zakresem:
+- nowe źródła muzyki
+- oficjalne Sonos Control API
+- logowanie do Apple Music, OAuth albo prywatne API Apple
+- pobieranie pełnej biblioteki użytkownika z Apple Music
+- gwarancja artysty dla każdego albumu
+- zmiana playbacku, kolejki, pętli, tracklisty albo playera poza usunięciem fallbacku artysty
+- przebudowa całego premium UI
+- nowe zależności frontendowe
+
+Walidacja:
+- `uv run python -m unittest discover -s tests -p "test_*.py"`
+- `node --check src/sonos_album_controller/static/app.js`
+- `git diff --check`
+- test wyciągania Apple album ID z `album%3A<id>` i `album:<id>`
+- test wzbogacenia albumu bez artysty przez stub Apple/iTunes lookup
+- test braku wyniku i błędu lookupu bez blokowania raportu albumów
+- test zapisu i odczytu wzbogaconego artysty z cache
+- test statyczny frontendu potwierdzający brak renderowania `Wykonawca nieznany`
+- Browser smoke albo ręczny smoke z realnym `SONOS_SPEAKER_IP`: odświeżenie albumów, potwierdzenie artystów dla przykładowych albumów `[VirtuouS] - EP` / `<ASSEMBLE24>`, potwierdzenie braku fallbacku dla nierozpoznanych albumów oraz regresja odtwarzania albumu
+
+Kontrakt sprintu:
+- wymagany przed implementacją: tak
+- najważniejsze walidacje: testy lookupu bez zewnętrznego IO, cache, statyczny kontrakt UI i smoke z realnym Sonosem
+- stop conditions: brak stabilnego Apple album ID w metadanych Sonosa, potrzeba prywatnego API Apple albo konieczność zmiany publicznego kontraktu albumów bez osobnej decyzji
+
+Uwagi:
+- milestone wynika z `prd/003-artysci-albumow.md`
+- zakres ocenia się jako średni: zmiana dotyka backendowego wzbogacania metadanych, cache i prezentacji UI, ale nie zmienia playbacku ani źródeł muzyki
+- publiczny Apple/iTunes lookup jest nowym zachowaniem sieciowym; musi pozostać best effort, cache’owane i nieblokujące dla lokalnego działania aplikacji
+- milestone zakończony po pozytywnym ponownym self-review; implementacja przeszła testy automatyczne, `py_compile`, `node --check`, `git diff --check`, Browser smoke z tymczasowym cache oraz realny smoke odświeżenia albumów dla `SONOS_SPEAKER_IP=192.168.0.172`; po self-review dodano budżet czasu lookupów i circuit breaker

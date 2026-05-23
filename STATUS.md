@@ -11,9 +11,9 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Aktualny milestone / batch
 
-- Aktualny milestone: Milestone 10: Wybór piosenki z widocznej listy
-- Status: zakończony po pozytywnym self-review, zapisany na gałęzi `codex/wybor-piosenki-z-listy` i wypchnięty do `origin`
-- Kontrakt sprintu: utworzony przed implementacją w odpowiedzi agenta; profil `openai_patch`, format patch/diff przez `apply_patch`
+- Aktualny milestone: Milestone 11: Artyści albumów z Apple Lookup
+- Status: zakończony po pozytywnym ponownym self-review; gotowy do commita i pusha
+- Kontrakt sprintu: ustalony przed implementacją; profil `openai_patch`, format patch/diff przez `apply_patch`
 - Zakres poza bieżącą pracą: nowe źródła muzyki, playlisty/radio/pojedyncze utwory spoza albumów, wyszukiwanie w trackliście, drag-and-drop kolejki, seek, aktywna synchronizacja zmian spoza aplikacji, przebudowa całego UI, nowe zależności
 
 ## Co działa
@@ -39,6 +39,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 - UI MVP ma spójny ciemny styl dla ekranu albumów, widoku albumu, playera i diagnostyki.
 - Lokalnie zaimplementowano premium music-first UI z PRD 001: kompaktowy header ze statusami, duże okładki albumów, stały dolny player, premium widok albumu, dopracowane stany loading/cache/error, responsywność desktop/mobile i podstawową dostępność bez nowych zależności.
 - Aktualnie grający utwór w trackliście ma mały animowany wskaźnik equalizera; po pauzie aktywny utwór pozostaje oznaczony statycznym symbolem.
+- Lokalnie zaimplementowano best effort wzbogacanie brakujących artystów albumów Apple Music przez Apple/iTunes lookup po Apple album ID z metadanych Sonosa; wynik trafia do istniejącego cache, a UI ukrywa pustą linię artysty zamiast pokazywać `Wykonawca nieznany`.
 
 ## Co jest skończone
 
@@ -55,14 +56,15 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 - Milestone 8 został zaimplementowany jako neutralny badge jakości audio, nietechniczne komunikaty błędów z lokalnym logowaniem szczegółów oraz ciemne polerowanie UI MVP, z walidacją automatyczną, rozszerzonym Browser smoke i pozytywnym self-review po poprawce diagnostyki.
 - Milestone 9 został zaimplementowany jako premium music-first frontend z PRD 001, z dużą siatką albumów, stałym dolnym playerem, responsywnym widokiem albumu, dostępnością podstawowych akcji, poprawkami po self-review i pozytywnym finalnym self-review.
 - Milestone 10 został zaimplementowany jako wybór dowolnej widocznej piosenki z tracklisty, backendowy przeskok do indeksu w aktualnej kolejce, obsługa myszą/klawiaturą i wskaźnik grania aktywnego utworu, z walidacją automatyczną, Browser smoke i pozytywnym self-review.
+- Milestone 11 został zaimplementowany jako best effort wzbogacanie artystów albumów Apple Music przez Apple/iTunes lookup, z cache, budżetem czasu lookupów, ukryciem pustej linii artysty w UI, realnym smoke Sonos i pozytywnym ponownym self-review.
 
 ## Co jest w trakcie
 
-- Brak aktywnej implementacji; Milestone 10 jest zakończony, zapisany w repo i wypchnięty do `origin/codex/wybor-piosenki-z-listy`.
+- Brak aktywnej implementacji; Milestone 11 jest zakończony po pozytywnym ponownym self-review i gotowy do finalizacji operacyjnej.
 
 ## Co jest następne
 
-- Rozpocząć kolejny przyrost od nowego PRD albo decyzji produktowej.
+- Wykonać commit i push Milestone 11, a następny przyrost rozpocząć od nowego PRD albo decyzji produktowej.
 
 ## Walidacja
 
@@ -123,6 +125,11 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Milestone 10 equalizer aktywnego utworu i finalna walidacja | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `uv run python -m py_compile src/sonos_album_controller/playback.py src/sonos_album_controller/main.py`; `git diff --check`; `@Browser` na `http://127.0.0.1:8031` | PASS | 64 testy PASS; smoke potwierdził, że grający utwór ma trzy-słupkowy equalizer, po pauzie wskaźnik znika i zostaje statyczny symbol `▶`; składnia JS/Python i diff poprawne. |
 | 2026-05-23 | Push Milestone 10 | `git push -u origin codex/wybor-piosenki-z-listy` | PASS | Gałąź `codex/wybor-piosenki-z-listy` wypchnięta do `origin`; commit implementacyjny: `9b8a316`. |
 | 2026-05-23 | Wrap-up po finalizacji Milestone 10 | `git status --short --branch`; `git log -3 --oneline --decorate`; `git push` | PASS | Gałąź `codex/wybor-piosenki-z-listy` śledzi `origin/codex/wybor-piosenki-z-listy`; historia zawiera commit implementacyjny `9b8a316` i commity wrap-up statusu. |
+| 2026-05-23 | PRD 003 i plan Milestone 11 | `git diff --check -- spec.md ROADMAP.md STATUS.md prd/003-artysci-albumow.md`; `rg -n "003-artysci-albumow\|Milestone 11\|Apple/iTunes\|TODO" spec.md ROADMAP.md prd/003-artysci-albumow.md` | PASS | Dodano PRD 003, rozszerzono specyfikację i roadmapę o wzbogacanie artystów albumów przez Apple/iTunes lookup; zmiana dokumentacyjna bez testów runtime. |
+| 2026-05-23 | Milestone 11 implementacja lokalna | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `uv run python -m py_compile src/sonos_album_controller/albums.py src/sonos_album_controller/album_refresh.py src/sonos_album_controller/artist_lookup.py src/sonos_album_controller/main.py`; `git diff --check` | PASS | 70 testów PASS; dodano ekstrakcję Apple album ID, lookup artysty przez stubowalną warstwę, cache znanych artystów i statyczny kontrakt UI bez `Wykonawca nieznany`. |
+| 2026-05-23 | Milestone 11 Browser smoke z cache bez realnego Sonosa | `@Browser` na `http://127.0.0.1:8127` z tymczasowym `SONOS_CACHE_PATH`; lista albumów i wejście w album bez artysty | PASS | UI pokazał `Dreamcatcher` dla `[VirtuouS] - EP`; album bez artysty miał ukrytą pustą linię w szczególe; tekst `Wykonawca nieznany` nie pojawił się w DOM. |
+| 2026-05-23 | Poprawki po self-review Milestone 11 | `uv run python -m unittest tests.test_albums`; `PYTHONPATH=src SONOS_SPEAKER_IP=192.168.0.172 SONOS_CACHE_PATH=<temp>/albums.json uv run python - <<'PY' ...` | PASS | Dodano budżet czasu lookupów i circuit breaker po błędzie lookupu; testy regresyjne potwierdziły pomijanie kolejnych lookupów po błędzie i po przekroczeniu budżetu. Realny smoke z Sonosem zwrócił 65 albumów, `[VirtuouS] - EP` jako `Dreamcatcher` i `<ASSEMBLE24>` jako `tripleS`, z zapisem do tymczasowego cache. |
+| 2026-05-23 | Finalna walidacja po poprawkach Milestone 11 | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `uv run python -m py_compile src/sonos_album_controller/albums.py src/sonos_album_controller/album_refresh.py src/sonos_album_controller/artist_lookup.py src/sonos_album_controller/main.py`; `git diff --check` | PASS | 72 testy PASS; składnia JS/Python i diff poprawne po poprawkach self-review. |
 
 ## Review
 
@@ -147,6 +154,8 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Self-review Milestone 9 | P1/P2/P3 | `Odtworz album` był ukryty dla albumów z tracklistą; brak regresyjnej walidacji tej akcji; przewijanie JS nie respektowało `prefers-reduced-motion` | Poprawki wdrożone; wykonać ponowny self-review przed finalizacją. |
 | 2026-05-23 | Self-review Milestone 9 po poprawkach i korekcie playera | PASS | brak | Finalizacja operacyjna, commit i push. |
 | 2026-05-23 | Self-review Milestone 10 po equalizerze | PASS | brak | Finalizacja operacyjna, commit i push. |
+| 2026-05-23 | Self-review Milestone 11 | P1/P2 | Lookup mógł blokować listę albumów przez sekwencyjne timeouty; smoke Browser z cache nie potwierdzał realnej ścieżki Sonos + Apple lookup | Poprawki wdrożone; wykonać ponowny self-review przed finalizacją. |
+| 2026-05-23 | Self-review Milestone 11 po poprawkach | PASS | brak | Finalizacja operacyjna, commit i push. |
 
 ## Błędy narzędzi i odzyskiwanie
 
@@ -173,6 +182,9 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 | 2026-05-23 | `apply_patch` dla zbiorczej aktualizacji `STATUS.md` po poprawkach Milestone 9 | InvalidArguments | Patch zakładał nieaktualny kontekst tabeli review | Rozbito aktualizację `STATUS.md` na mniejsze hunki | nie |
 | 2026-05-23 | Browser runtime przy smoke equalizera Milestone 10 | InvalidArguments | Utrzymywana sesja JS miała już zadeklarowane nazwy zmiennych użyte w smoke | Powtórzono smoke z nazwami zapisanymi na `globalThis` i unikalnymi identyfikatorami | nie |
 | 2026-05-23 | Tymczasowy fake backend dla smoke equalizera Milestone 10 | InvalidArguments | Fixture smoke nie serwowała poprawnie plików pod ścieżką `/static/`, więc frontend nie ładował JS | Zatrzymano fixture, poprawiono mapowanie `/static/` w jednorazowym fake backendzie i powtórzono Browser smoke | nie |
+| 2026-05-23 | `uvicorn` smoke Milestone 11 na porcie 8021 | UnexpectedEnvironment | Port `127.0.0.1:8021` był już zajęty | Uruchomiono jednorazowy smoke backend na porcie `8127` | nie |
+| 2026-05-23 | Browser smoke Milestone 11 | InvalidArguments | Pierwsza próba użyła metody oczekiwania poza powierzchnią zakładki Browser | Powtórzono smoke przez obsługiwane API `tab.playwright.waitForLoadState` i odczyt DOM | nie |
+| 2026-05-23 | Realny smoke Milestone 11 | InvalidArguments | Skrypt walidacyjny uruchomiony bez `PYTHONPATH=src` nie widział pakietu `sonos_album_controller` | Powtórzono komendę z `PYTHONPATH=src` i tymczasowym `SONOS_CACHE_PATH` | nie |
 
 ## Keep rate / trwałość zmian
 
@@ -192,6 +204,7 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 | 2026-05-23 | Milestone 8 jakość audio, błędy i UI MVP | `src/`, `tests/`, `README.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review | Poprawki po review ograniczyły się do nietechnicznego komunikatu diagnostyki i rozszerzenia Browser smoke; neutralny fallback jakości audio, brak nowych zależności i ciemny UI MVP zostały utrzymane. |
 | 2026-05-23 | Milestone 9 premium music-first frontend | `src/sonos_album_controller/static/`, `tests/`, `prd/001-premium-music-ui.md`, `spec.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review i korekcie playera | Zmiana pozostała w statycznym HTML/CSS/vanilla JS, bez backendu i zależności; review wymusił tylko widoczny przycisk albumu, regresyjny test, reduced motion oraz kosmetyczne usunięcie badge jakości z playera. |
 | 2026-05-23 | Milestone 10 wybór piosenki z tracklisty | `src/`, `tests/`, `prd/002-wybor-piosenki-z-listy.md`, `spec.md`, `ROADMAP.md`, `STATUS.md`, `README.md` | 100% po self-review i mikro-korekcie UX equalizera | Implementacja endpointu przeskoku, logiki wyboru widocznego utworu i testów przeszła self-review bez problemów krytycznych; późniejsza uwaga manualna dodała tylko statyczny wskaźnik grania w istniejącym froncie. |
+| 2026-05-23 | Milestone 11 artyści albumów z Apple Lookup | `src/`, `tests/`, `prd/003-artysci-albumow.md`, `spec.md`, `ROADMAP.md`, `STATUS.md`, `README.md` | 100% po poprawkach self-review | Implementacja wzbogacania artystów, cache i ukrywania fallbacku UI przetrwała ponowny review; poprawki ograniczyły się do budżetu czasu lookupów, circuit breakera i realnego smoke Sonos bez poszerzania zakresu. |
 
 ## Blokery i ryzyka
 
@@ -205,10 +218,10 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 
 ## Handoff do następnej sesji
 
-- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, Milestone 5 ma zakończony widok albumu i player bez odtwarzania, Milestone 6 ma zakończony playback z fallbackiem `AddURIToQueue` i odczytem tracklisty z kolejki Sonosa po starcie albumu, Milestone 7 ma zakończone tryby pętli i lokalny pasek postępu po pozytywnym self-review, Milestone 8 ma zakończony neutralny badge jakości audio, nietechniczne błędy/logi i ciemne polerowanie UI MVP po pozytywnym self-review, Milestone 9 ma zakończony premium music-first frontend, a Milestone 10 ma zakończony wybór widocznej piosenki z tracklisty i wskaźnik grania aktywnego utworu.
+- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, Milestone 5 ma zakończony widok albumu i player bez odtwarzania, Milestone 6 ma zakończony playback z fallbackiem `AddURIToQueue` i odczytem tracklisty z kolejki Sonosa po starcie albumu, Milestone 7 ma zakończone tryby pętli i lokalny pasek postępu po pozytywnym self-review, Milestone 8 ma zakończony neutralny badge jakości audio, nietechniczne błędy/logi i ciemne polerowanie UI MVP po pozytywnym self-review, Milestone 9 ma zakończony premium music-first frontend, Milestone 10 ma zakończony wybór widocznej piosenki z tracklisty i wskaźnik grania aktywnego utworu, a Milestone 11 ma zakończone wzbogacanie artystów albumów przez Apple/iTunes lookup po pozytywnym ponownym self-review.
 - Decyzje, których nie wolno zgubić: FastAPI + SoCo, statyczny frontend HTML/CSS/vanilla JS, jeden Sonos Era 300 po stałym IP z `SONOS_SPEAKER_IP`, cache albumów w `~/.sonos-album-controller/cache/albums.json` albo `SONOS_CACHE_PATH`, jakość audio best effort, testy automatyczne bez realnego Sonosa.
 - Pliki, które warto doczytać jako pierwsze: `AGENTS.md`, `STATUS.md`, `spec.md`, `ROADMAP.md`, `src/sonos_album_controller/app_logging.py`, `src/sonos_album_controller/playback.py`, `src/sonos_album_controller/albums.py`, `src/sonos_album_controller/static/app.js`, `src/sonos_album_controller/static/styles.css`, `tests/test_playback.py`, `tests/test_app_smoke.py`.
-- Następny bezpieczny krok: rozpocząć kolejny przyrost od nowego PRD albo decyzji produktowej; jeśli priorytetem są metadane albumów, przygotować osobny mały PoC dla artysty z `resource_meta_data`/kolejki Sonosa.
+- Następny bezpieczny krok: commit i push Milestone 11; kolejną pracę rozpocząć od nowego PRD albo decyzji produktowej.
 - Czego nie robić: nie zaczynać pełnej integracji z Sonosem przed PoC z Milestone 1; nie dodawać zależności frontendowych bez potrzeby.
 
 ## Ostatnie aktualizacje
@@ -256,3 +269,7 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-23: Po manualnej uwadze UX dodano mały trzy-słupkowy equalizer przy aktualnie grającym utworze; Browser smoke potwierdził wskaźnik podczas odtwarzania i statyczny symbol po pauzie.
 - 2026-05-23: Self-review Milestone 10 po equalizerze zakończył się bez problemów krytycznych; dokumentacja operacyjna została przygotowana do commita i pusha.
 - 2026-05-23: Sfinalizowano Milestone 10 na gałęzi `codex/wybor-piosenki-z-listy` i wypchnięto ją do `origin`; wrap-up potwierdził spójny handoff.
+- 2026-05-23: Dodano `prd/003-artysci-albumow.md`, rozszerzono `spec.md` i `ROADMAP.md` o Milestone 11 dotyczący best effort wzbogacania artystów albumów przez Apple/iTunes lookup.
+- 2026-05-23: Zaimplementowano Milestone 11 lokalnie: ekstrakcję Apple album ID, stubowalny Apple/iTunes lookup artysty, wykorzystanie znanych artystów z cache, zapis wzbogaconego artysty do cache oraz ukrycie pustego artysty w UI zamiast `Wykonawca nieznany`; walidacje automatyczne i Browser smoke z tymczasowym cache przeszły.
+- 2026-05-23: Po self-review Milestone 11 dodano budżet czasu wzbogacania artystów i circuit breaker po błędzie lookupu, a realny smoke z Sonosem potwierdził artystów `Dreamcatcher` i `tripleS` dla przykładowych albumów; milestone wymaga ponownego self-review.
+- 2026-05-23: Ponowny self-review Milestone 11 zakończył się bez problemów krytycznych; dokumentacja operacyjna została przygotowana do commita i pusha.
