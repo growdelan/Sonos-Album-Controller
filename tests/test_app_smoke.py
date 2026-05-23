@@ -176,6 +176,20 @@ class AppSmokeTest(unittest.TestCase):
         self.assertEqual(response.json()["state"]["track_index"], 2)
         self.assertEqual(response.json()["state"]["repeat_mode"], "album")
 
+    def test_playback_select_endpoint_passes_visible_track_context(self) -> None:
+        report = PlaybackReport(status="ok", state=PlayerState(None, None, 2, is_playing=True, repeat_mode="album"))
+
+        with patch("sonos_album_controller.main.select_queue_track", return_value=report) as select:
+            response = self.client.post(
+                "/api/playback/select",
+                json={"track_index": 2, "track_count": 3, "repeat_mode": "album"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        select.assert_called_once()
+        self.assertEqual(response.json()["state"]["track_index"], 2)
+        self.assertEqual(response.json()["state"]["repeat_mode"], "album")
+
     def test_playback_repeat_endpoint_uses_playback_service(self) -> None:
         report = PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=False, repeat_mode="track"))
 
@@ -204,8 +218,18 @@ class AppSmokeTest(unittest.TestCase):
         self.assertIn('id="play-album-button"', html)
         self.assertIn('playAlbumButton.hidden = false;', script)
         self.assertIn("playAlbumButton.onclick = () => startAlbum(album.id);", script)
+        self.assertIn('button.setAttribute("aria-label", `Odtworz: ${track.title}`);', script)
+        self.assertIn('button.addEventListener("keydown", (event) => {', script)
+        self.assertIn('event.key === "Enter" || event.key === " "', script)
+        self.assertIn('postJson("/api/playback/select"', script)
+        self.assertIn("playerState.loadedQueueAlbumId === albumId", script)
+        self.assertIn('item.classList.toggle("playing-track", isPlaying);', script)
+        self.assertIn('indicator.className = "track-playing-indicator";', script)
         self.assertIn('window.matchMedia("(prefers-reduced-motion: reduce)")', script)
         self.assertIn("setMarqueeText(target, message)", script)
+        styles = (static_dir / "styles.css").read_text(encoding="utf-8")
+        self.assertIn(".track-playing-indicator", styles)
+        self.assertIn("@keyframes track-equalizer", styles)
         self.assertNotIn("audio-quality-badge", html)
 
 

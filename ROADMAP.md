@@ -480,3 +480,62 @@ Uwagi:
 - milestone wynika z `prd/001-premium-music-ui.md`
 - zakres ocenia się jako średni: zmiana jest rozległa wizualnie, ale ograniczona do istniejącego statycznego frontendu i bez zmian backendu
 - milestone zakończony po poprawkach self-review i dodatkowej korekcie wizualnej playera; frontend nie pokazuje już badge jakości audio, a długi tytuł/kontekst odtwarzania przewija się w dolnym playerze
+
+---
+
+## Milestone 10: Wybór piosenki z widocznej listy (done)
+
+Cel:
+- umożliwić kliknięcie dowolnego widocznego utworu w trackliście i natychmiastowe uruchomienie go na Sonosie
+- pozwolić na wygodny przeskok do wybranego indeksu po odkryciu tracklisty z kolejki Sonosa, bez wielokrotnego używania `Następny` i `Poprzedni`
+- zachować istniejącą ścieżkę startu albumu od indeksu, gdy album nie jest jeszcze załadowany jako aktualna kolejka
+
+Definition of Done:
+- każdy widoczny utwór w trackliście jest interaktywny myszą i klawiaturą
+- kliknięcie lub aktywacja Enter/Space uruchamia dokładnie wybrany utwór
+- dla tracklisty aktualnie załadowanego albumu aplikacja przeskakuje do wskazanego indeksu w kolejce zamiast ponownie czyścić i ładować album
+- dla tracklisty niezaładowanego albumu aplikacja może użyć istniejącego startu albumu od wybranego indeksu
+- UI aktualizuje aktywny wiersz, tytuł w playerze, stan play/pause i lokalny pasek postępu dopiero po potwierdzeniu backendu
+- `Następny` i `Poprzedni` po ręcznym wyborze działają względem nowego indeksu
+- tryb pętli nie resetuje się przez wybór utworu
+- błąd backendu pokazuje nietechniczny komunikat i nie zostawia fałszywego aktywnego utworu
+- testy automatyczne pokrywają przeskok do indeksu, indeks poza zakresem i zachowanie trybu pętli
+- smoke test UI potwierdza kliknięcie utworu z tracklisty odkrytej po fallbackowym uruchomieniu albumu
+
+Zakres:
+- backendowa akcja albo rozszerzenie istniejącego playbacku pozwalające wybrać indeks w aktualnej kolejce albumu
+- rozróżnienie w UI między przeskokiem w już załadowanej kolejce a pełnym startem albumu od indeksu
+- stany loading/error dla klikniętego utworu
+- semantyka przycisku, `aria-label`, focus i obsługa Enter/Space dla wierszy tracklisty
+- testy backendu i statyczne/regresyjne testy frontendu bez realnego Sonosa
+
+Poza zakresem:
+- nowe źródła muzyki
+- obsługa playlist, radia albo pojedynczych utworów spoza albumów
+- wyszukiwanie w trackliście
+- drag-and-drop kolejki
+- seek po czasie utworu
+- aktywna synchronizacja zmian wykonanych poza aplikacją
+- przebudowa całego premium UI
+- nowe zależności frontendowe albo backendowe
+
+Walidacja:
+- `uv run python -m unittest discover -s tests -p "test_*.py"`
+- `node --check src/sonos_album_controller/static/app.js`
+- `git diff --check`
+- test backendu dla przeskoku do wskazanego indeksu w istniejącej kolejce
+- test backendu dla indeksu poza zakresem
+- test backendu potwierdzający, że tryb pętli pozostaje zachowany
+- test statycznego kontraktu frontendu: tracklist item jest interaktywny i wywołuje start/przeskok z właściwym indeksem
+- Browser smoke: wejście w album, uruchomienie albumu tak, aby pojawiła się tracklista, kliknięcie drugiego lub dalszego utworu, potwierdzenie playera, `Następny`, `Poprzedni`, focus oraz Enter/Space
+
+Kontrakt sprintu:
+- utworzony przed implementacją: tak
+- najważniejsze walidacje: testy playbacku bez realnego Sonosa, test statycznego kontraktu tracklisty, Browser smoke kliknięcia utworu
+- stop conditions: brak stabilnej operacji SoCo pozwalającej wybrać indeks w kolejce albo brak możliwości odróżnienia aktualnej kolejki albumu od niezaładowanej tracklisty bez ryzyka fałszywego stanu UI
+
+Uwagi:
+- milestone wynika z `prd/002-wybor-piosenki-z-listy.md`
+- zakres ocenia się jako mały/średni: zmiana dotyka istniejącego playbacku i UI tracklisty, ale nie wymaga nowych źródeł danych, zależności ani przebudowy całego interfejsu
+- istnieje ryzyko integracyjne SoCo dotyczące wyboru indeksu w kolejce; jeśli operacja nie będzie stabilna, implementacja musi zachować potwierdzony stan backendu i nie udawać udanego przeskoku w UI
+- milestone zakończony po pozytywnym self-review; tracklista pozwala wybrać widoczny utwór, a aktualnie grający utwór ma mały wskaźnik equalizera widoczny tylko w stanie odtwarzania

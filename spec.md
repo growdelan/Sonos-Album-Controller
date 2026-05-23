@@ -4,7 +4,7 @@
 
 Aplikacja ma być prywatnym, lokalnym webowym kontrolerem jednego głośnika Sonos Era 300 w tej samej sieci domowej. Rozwiązuje problem szybkiego przeglądania albumów zapisanych w Sonos Favorites / My Sonos oraz uruchamiania odtwarzania albumu od wybranego utworu bez korzystania z oficjalnego Sonos Control API, OAuth ani zdalnego dostępu.
 
-Głównym użytkownikiem jest właściciel jednego głośnika Sonos Era 300, korzystający głównie z Apple Music przez Sonos. Zakres MVP obejmuje lokalny backend Python, statyczny frontend desktopowy, cache albumów, diagnostykę połączenia i podstawowe sterowanie odtwarzaniem. Kolejny przyrost `prd/001-premium-music-ui.md` rozszerza wymagania frontendu o premium music-first UI, responsywność mobile/tablet oraz dopracowaną dostępność bez zmiany backendu, endpointów ani zależności.
+Głównym użytkownikiem jest właściciel jednego głośnika Sonos Era 300, korzystający głównie z Apple Music przez Sonos. Zakres MVP obejmuje lokalny backend Python, statyczny frontend desktopowy, cache albumów, diagnostykę połączenia i podstawowe sterowanie odtwarzaniem. Kolejny przyrost `prd/001-premium-music-ui.md` rozszerza wymagania frontendu o premium music-first UI, responsywność mobile/tablet oraz dopracowaną dostępność bez zmiany backendu, endpointów ani zależności. Przyrost `prd/002-wybor-piosenki-z-listy.md` rozszerza playback o bezpośredni wybór dowolnej widocznej piosenki z tracklisty, w tym tracklisty odkrytej po załadowaniu albumu do kolejki Sonosa.
 
 Poza zakresem MVP są: logowanie, konta użytkowników, dostęp spoza sieci lokalnej, automatyczne wykrywanie wielu głośników, obsługa playlist, stacji radiowych, pojedynczych utworów jako źródeł biblioteki, konteneryzacja oraz integracja z oficjalnym Sonos Control API.
 
@@ -18,6 +18,7 @@ Aplikacja zapewnia następujące przepływy użytkownika:
 - ręczne odświeżenie listy albumów oraz korzystanie z cache, gdy Sonos jest niedostępny
 - wejście w widok albumu z okładką, tytułem, wykonawcą i listą utworów
 - kliknięcie wybranego utworu, wyczyszczenie kolejki Sonosa, załadowanie całego albumu i start od wybranego indeksu
+- kliknięcie dowolnego widocznego utworu z już załadowanej tracklisty, aby przeskoczyć do tego indeksu bez ponownego ładowania albumu, jeśli aktualna kolejka odpowiada temu albumowi
 - sterowanie play/pause, next, previous, trybem pętli, głośnością i mute/unmute
 - obserwowanie lokalnie przewidywanego paska postępu i przejść między utworami
 - zobaczenie badge jakości audio, jeśli Sonos/SoCo udostępnia wiarygodne dane, albo neutralnego stanu `Jakość niedostępna`
@@ -34,7 +35,7 @@ Aplikacja nie synchronizuje aktywnie zmian wykonanych poza nią po otwarciu wido
 1. Backend Python udostępnia lokalne endpointy HTTP dla frontendu, serwuje statyczny interfejs i izoluje komunikację z Sonos Era 300.
 2. Adapter Sonos komunikuje się z jednym głośnikiem po stałym IP z konfiguracji lokalnej i odpowiada za diagnostykę, pobieranie Favorites, rozwijanie albumów, sterowanie kolejką, odtwarzaniem, pętlą, głośnością i mute.
 3. Warstwa cache przechowuje lokalnie albumy, metadane, listy utworów, czasy trwania i czas ostatniego udanego odświeżenia. Nie musi pobierać ani zapisywać obrazów okładek lokalnie.
-4. Frontend HTML/CSS/vanilla JavaScript renderuje ekran albumów, widok albumu, player, diagnostykę, stany puste i błędy. Frontend przewiduje postęp utworu lokalnie na podstawie czasu startu, długości utworu i trybu pętli. Warstwa wizualna powinna używać design tokens w CSS, układu music-first, stałego dolnego playera i responsywnych reguł desktop/tablet/mobile.
+4. Frontend HTML/CSS/vanilla JavaScript renderuje ekran albumów, widok albumu, player, diagnostykę, stany puste i błędy. Frontend przewiduje postęp utworu lokalnie na podstawie czasu startu, długości utworu i trybu pętli. Widoczna tracklista jest powierzchnią wyboru utworu: kliknięcie lub aktywacja klawiaturą uruchamia wskazany indeks i aktualizuje player dopiero po potwierdzeniu backendu. Warstwa wizualna powinna używać design tokens w CSS, układu music-first, stałego dolnego playera i responsywnych reguł desktop/tablet/mobile.
 5. Logowanie błędów i ostrzeżeń trafia do lokalnego pliku logów; zwykłe akcje informacyjne nie muszą być logowane.
 
 Przepływ startowy:
@@ -53,6 +54,7 @@ Miejsca wymagające walidacji lub smoke testów:
 - zachowanie cache przy błędzie odświeżenia
 - filtrowanie tylko albumów z Favorites
 - kolejka zawierająca cały album przy starcie od wybranego utworu
+- wybór dowolnego widocznego utworu po załadowaniu tracklisty, bez fałszywej aktualizacji UI przy błędzie backendu
 - lokalna logika pętli i paska postępu w UI
 - smoke test responsywnego frontendu na desktopowym i mobilnym viewportcie
 - kontrola dostępności podstawowych akcji: semantyczne przyciski, `aria-label`, widoczny focus i brak informacji przekazywanej wyłącznie kolorem
@@ -66,7 +68,7 @@ Miejsca wymagające walidacji lub smoke testów:
 - Adapter Sonos / SoCo: granica integracji z głośnikiem i miejscami niestabilnymi technicznie.
 - Serwis albumów: pobieranie Sonos Favorites / My Sonos, filtrowanie albumów, normalizacja metadanych i list utworów.
 - Cache lokalny: trwały zapis metadanych albumów i czasu ostatniego odświeżenia, z ochroną przed usunięciem działającego cache po błędzie.
-- Serwis odtwarzania: operacje kolejki, start od indeksu, play/pause, next/previous, tryby pętli, głośność i mute.
+- Serwis odtwarzania: operacje kolejki, start od indeksu, przeskok do indeksu w aktualnej kolejce, play/pause, next/previous, tryby pętli, głośność i mute.
 - Diagnostyka: test połączenia, status integracji, ostatni błąd i informacja o świeżości/cache.
 - Frontend statyczny: widok albumów, widok albumu, player, diagnostyka, komunikaty błędów, lokalna predykcja postępu, premium music-first layout, responsywność i dostępność bez zewnętrznych bibliotek frontendowych.
 - Logowanie: lokalne ostrzeżenia i błędy integracji, cache i odtwarzania.
@@ -90,6 +92,11 @@ Miejsca wymagające walidacji lub smoke testów:
 - Uzasadnienie: Realny Sonos Era 300 zwraca 0 utworów z `MusicLibrary.browse` dla albumów Apple Music Favorites, ale poprawnie ładuje cały album przez albumowy kontener i udostępnia utwory w kolejce.
 - Konsekwencje: Tracklista dla takich albumów nie jest znana przed uruchomieniem fallbacku; samo wejście w album nie może niszczyć bieżącej kolejki tylko po to, aby odkryć utwory.
 - Dotyczy PRD / milestone’u: PRD 4.3, FR-8, FR-9, FR-10; Milestone 6.
+
+- Decyzja: Po załadowaniu widocznej tracklisty wybór innego utworu powinien preferować przeskok do indeksu w aktualnej kolejce albumu, a nie ponowne czyszczenie i ładowanie albumu. (dotyczy PRD: 002-wybor-piosenki-z-listy.md)
+- Uzasadnienie: PRD 002 wymaga, aby lista utworów odkryta po fallbackowym `AddURIToQueue` była użyteczna jako nawigacja po albumie, bez wielokrotnego klikania `Następny` i `Poprzedni`.
+- Konsekwencje: Backend musi potwierdzić zmianę indeksu przed aktualizacją aktywnego wiersza w UI; błędna operacja nie może zostawić fałszywego stanu odtwarzania. Jeśli aktualna kolejka nie odpowiada widocznej trackliście, aplikacja może użyć istniejącej ścieżki startu albumu od wybranego indeksu.
+- Dotyczy PRD / milestone’u: `prd/002-wybor-piosenki-z-listy.md`; Milestone 10.
 
 - Decyzja: Frontend MVP będzie statycznym HTML + CSS + vanilla JavaScript bez zależności frontendowych, jeśli zakres nie wymusi inaczej.
 - Uzasadnienie: PRD wymaga prostego lokalnego UI i preferuje brak zależności frontendowych.
@@ -153,6 +160,7 @@ Wspólne wymagania jakościowe dla całego projektu:
 - funkcje zależne od rzeczywistego Sonosa mają fallback lub są poprzedzone PoC
 - frontend nie może wyglądać jak panel administracyjny; albumy, okładki i player mają dominować nad statusem technicznym
 - zmiany wizualne muszą zachować istniejące API, logikę backendu, brak zależności frontendowych oraz dostępność podstawowych akcji
+- wybór utworu z tracklisty musi obsługiwać mysz i klawiaturę oraz nie może oznaczać utworu jako aktywnego bez potwierdzenia backendu
 
 ---
 
@@ -179,4 +187,4 @@ Wspólne wymagania jakościowe dla całego projektu:
 
 - Data utworzenia: 2026-05-22
 - Ostatnia aktualizacja: 2026-05-23
-- Aktualny zakres obowiązywania: MVP lokalnej aplikacji WWW do sterowania jednym Sonos Era 300 zgodnie z `prd/000-initial-prd.md`, rozszerzone o wymagania premium music-first UI z `prd/001-premium-music-ui.md`
+- Aktualny zakres obowiązywania: MVP lokalnej aplikacji WWW do sterowania jednym Sonos Era 300 zgodnie z `prd/000-initial-prd.md`, rozszerzone o wymagania premium music-first UI z `prd/001-premium-music-ui.md` oraz wybór piosenki z widocznej tracklisty z `prd/002-wybor-piosenki-z-listy.md`

@@ -138,6 +138,47 @@ def set_playback_playing(
     return PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=is_playing))
 
 
+def select_queue_track(
+    config: AppConfig,
+    track_index: int,
+    track_count: int,
+    repeat_mode: RepeatMode = "none",
+    speaker_factory: SpeakerFactory = SoCo,
+) -> PlaybackReport:
+    logger = get_app_logger(config.log_path)
+    if repeat_mode not in ("none", "album", "track"):
+        return PlaybackReport(status="invalid_request", message="Nieprawidlowy tryb petli.")
+    if track_index < 0 or track_index >= track_count:
+        return PlaybackReport(status="invalid_request", message="Wybrany utwor jest poza zakresem albumu.")
+
+    speaker_report = _speaker_from_config(config, speaker_factory)
+    if speaker_report.status != "ok":
+        return PlaybackReport(status=speaker_report.status, message=speaker_report.message)
+
+    assert speaker_report.speaker is not None
+    try:
+        speaker_report.speaker.play_from_queue(track_index)
+    except Exception as error:
+        logger.error("Nie udalo sie wybrac utworu z kolejki: %s", error)
+        return PlaybackReport(
+            status="error",
+            message="Nie udalo sie uruchomic wybranego utworu. Sprawdz polaczenie z Sonos.",
+        )
+
+    return PlaybackReport(
+        status="ok",
+        state=PlayerState(
+            None,
+            None,
+            track_index,
+            is_playing=True,
+            volume=_safe_int(getattr(speaker_report.speaker, "volume", None)),
+            muted=_safe_bool(getattr(speaker_report.speaker, "mute", None)),
+            repeat_mode=repeat_mode,
+        ),
+    )
+
+
 def skip_next(
     config: AppConfig,
     current_index: int | None = None,
