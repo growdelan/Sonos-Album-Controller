@@ -39,12 +39,25 @@ function renderAlbums(report) {
         return;
     }
 
-    if (albums.length === 0) {
-        message.textContent = "Brak albumow w Sonos Favorites.";
-        return;
+    if (report.status === "cached") {
+        const cacheMessage = report.last_refresh
+            ? `${report.message || "Pokazuje dane z cache."} Ostatnie dane: ${report.last_refresh}.`
+            : report.message || "Pokazuje dane z cache.";
+        message.textContent = albums.length === 0
+            ? `${cacheMessage} Cache nie zawiera albumow.`
+            : cacheMessage;
+        if (albums.length === 0) {
+            return;
+        }
+    } else {
+        if (albums.length === 0) {
+            message.textContent = "Brak albumow w Sonos Favorites.";
+            return;
+        }
+        message.textContent = report.last_refresh
+            ? `Ostatnie odswiezenie: ${report.last_refresh}.`
+            : "";
     }
-
-    message.textContent = "";
     albums.forEach((album) => {
         const card = document.createElement("article");
         card.className = "album-card";
@@ -72,14 +85,16 @@ function renderAlbums(report) {
     });
 }
 
-async function loadAlbums() {
+async function loadAlbums(refresh = false) {
     const message = document.querySelector("#albums-message");
     const count = document.querySelector("#albums-count");
     message.textContent = "Ladowanie albumow...";
     count.textContent = "-";
 
     try {
-        const response = await fetch("/api/albums");
+        const response = await fetch(refresh ? "/api/albums/refresh" : "/api/albums", {
+            method: refresh ? "POST" : "GET",
+        });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -96,7 +111,7 @@ function renderDiagnostics(diagnostics) {
     document.querySelector("#diagnostics-ip").textContent = diagnostics.configured_ip || "Nie skonfigurowano";
     document.querySelector("#diagnostics-connection").textContent = diagnostics.connection_status;
     document.querySelector("#diagnostics-cache").textContent = diagnostics.cache.available
-        ? "Dostepny"
+        ? `Dostepny${diagnostics.cache.last_refresh ? ` (${diagnostics.cache.last_refresh})` : ""}`
         : "Niedostepny";
     document.querySelector("#diagnostics-error").textContent = diagnostics.last_error || "Brak";
 }
@@ -134,7 +149,7 @@ async function testConnection() {
     }
 }
 
-document.querySelector("#refresh-albums-button").addEventListener("click", loadAlbums);
+document.querySelector("#refresh-albums-button").addEventListener("click", () => loadAlbums(true));
 document.querySelector("#diagnostics-button").addEventListener("click", loadDiagnostics);
 document.querySelector("#connection-test-button").addEventListener("click", testConnection);
 

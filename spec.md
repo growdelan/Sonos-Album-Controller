@@ -94,7 +94,7 @@ Miejsca wymagające walidacji lub smoke testów:
 
 - Decyzja: Albumy i metadane będą cache’owane lokalnie, a obrazy okładek nie muszą być pobierane do lokalnego magazynu.
 - Uzasadnienie: PRD wymaga działania z cache przy niedostępności Sonosa i dopuszcza przechowywanie linków/URI okładek.
-- Konsekwencje: Błąd odświeżenia nie może usuwać poprzedniego cache; UI musi rozróżniać dane świeże i dane z cache.
+- Konsekwencje: Błąd odświeżenia nie może usuwać poprzedniego cache; UI musi rozróżniać dane świeże i dane z cache. Domyślna lokalizacja cache to `~/.sonos-album-controller/cache/albums.json`, z możliwością nadpisania przez `SONOS_CACHE_PATH`.
 - Dotyczy PRD / milestone’u: PRD 7, 11.2, 11.3; Milestone 4.
 
 - Decyzja: Informacja o jakości audio jest funkcją best effort.
@@ -121,8 +121,6 @@ Miejsca wymagające walidacji lub smoke testów:
 - Uzasadnienie: Milestone 2 wymaga lokalnego pliku logów, a domyślna ścieżka poza repo nie miesza danych runtime z kodem projektu.
 - Konsekwencje: Endpoint diagnostyczny zwraca efektywną ścieżkę logów; testy mogą używać tymczasowego `SONOS_LOG_PATH` bez zewnętrznego IO.
 - Dotyczy PRD / milestone’u: PRD 9, 11.3, 12.6; Milestone 2.
-
-TODO: Ustalić dokładną lokalizację pliku cache w projekcie lub katalogu danych użytkownika.
 
 ---
 

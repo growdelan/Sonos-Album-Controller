@@ -4,7 +4,8 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from sonos_album_controller.albums import albums_report_to_dict, fetch_albums
+from sonos_album_controller.album_refresh import load_albums, refresh_albums
+from sonos_album_controller.albums import albums_report_to_dict
 from sonos_album_controller.config import load_config
 from sonos_album_controller.diagnostics import build_diagnostics, diagnostics_to_dict, test_sonos_connection
 
@@ -35,7 +36,13 @@ def read_status() -> dict[str, object]:
 
 @app.get("/api/albums")
 def read_albums() -> dict[str, object]:
-    report = fetch_albums(load_config())
+    report = load_albums(load_config())
+    return albums_report_to_dict(report)
+
+
+@app.post("/api/albums/refresh")
+def refresh_album_cache() -> dict[str, object]:
+    report = refresh_albums(load_config())
     return albums_report_to_dict(report)
 
 

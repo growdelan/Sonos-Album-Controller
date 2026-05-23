@@ -9,7 +9,15 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from sonos_album_controller.config import SONOS_LOG_PATH_ENV, SONOS_SPEAKER_IP_ENV, AppConfig, load_config  # noqa: E402
+from sonos_album_controller.album_cache import write_album_cache  # noqa: E402
+from sonos_album_controller.albums import Album  # noqa: E402
+from sonos_album_controller.config import (  # noqa: E402
+    SONOS_CACHE_PATH_ENV,
+    SONOS_LOG_PATH_ENV,
+    SONOS_SPEAKER_IP_ENV,
+    AppConfig,
+    load_config,
+)
 from sonos_album_controller.diagnostics import build_diagnostics, test_sonos_connection  # noqa: E402
 
 
@@ -30,14 +38,16 @@ class FailingSpeaker:
 
 
 class DiagnosticsTest(unittest.TestCase):
-    def test_load_config_reads_speaker_ip_and_log_path(self) -> None:
+    def test_load_config_reads_speaker_ip_log_path_and_cache_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             log_path = Path(temp_dir) / "app.log"
+            cache_path = Path(temp_dir) / "albums.json"
             with patch.dict(
                 "os.environ",
                 {
                     SONOS_SPEAKER_IP_ENV: " 192.0.2.20 ",
                     SONOS_LOG_PATH_ENV: str(log_path),
+                    SONOS_CACHE_PATH_ENV: str(cache_path),
                 },
                 clear=True,
             ):
@@ -45,6 +55,7 @@ class DiagnosticsTest(unittest.TestCase):
 
         self.assertEqual(config.sonos_speaker_ip, "192.0.2.20")
         self.assertEqual(config.log_path, log_path)
+        self.assertEqual(config.cache_path, cache_path)
 
     def test_diagnostics_without_ip_reports_not_configured_and_logs_warning(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -77,6 +88,36 @@ class DiagnosticsTest(unittest.TestCase):
             self.assertEqual(report.connection_status, "error")
             self.assertIn("connection refused", report.last_error or "")
             self.assertIn("ERROR", log_path.read_text(encoding="utf-8"))
+
+    def test_diagnostics_reports_existing_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cache_path = Path(temp_dir) / "albums.json"
+            write_album_cache(
+                cache_path,
+                [
+                    Album(
+                        id="album:1",
+                        title="Album",
+                        artist="Artist",
+                        uri="album:1",
+                        album_art_uri=None,
+                        date_added=None,
+                    )
+                ],
+                last_refresh="2026-05-23T12:00:00Z",
+            )
+
+            report = build_diagnostics(
+                AppConfig(
+                    sonos_speaker_ip="192.0.2.20",
+                    log_path=Path(temp_dir) / "app.log",
+                    cache_path=cache_path,
+                )
+            )
+
+        self.assertTrue(report.cache.available)
+        self.assertEqual(report.cache.last_refresh, "2026-05-23T12:00:00Z")
+        self.assertEqual(report.cache.status, "available")
 
     def test_logger_uses_only_current_log_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

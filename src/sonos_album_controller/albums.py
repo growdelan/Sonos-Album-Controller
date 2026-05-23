@@ -28,6 +28,8 @@ class AlbumsReport:
     status: str
     albums: list[Album]
     message: str | None = None
+    source: str = "sonos"
+    last_refresh: str | None = None
 
 
 def _read_value(item: Any, key: str) -> Any:
