@@ -28,8 +28,9 @@ Aplikacja używa tych opcjonalnych zmiennych środowiskowych:
 - `SONOS_SPEAKER_IP` - stały adres IP głośnika Sonos Era 300.
 - `SONOS_LOG_PATH` - ścieżka pliku logów; domyślnie `~/.sonos-album-controller/logs/app.log`.
 
-Endpointy diagnostyczne:
+Endpointy:
 
+- `GET /api/albums` - pobiera albumy z Sonos Favorites / My Sonos i zwraca je jako listę kafelków dla ekranu głównego.
 - `GET /api/diagnostics` - zwraca skonfigurowane IP, status połączenia, ostatni błąd i stan cache.
 - `POST /api/diagnostics/test-connection` - wykonuje test połączenia z Sonosem.
 

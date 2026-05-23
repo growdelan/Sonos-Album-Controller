@@ -159,7 +159,7 @@ Uwagi:
 
 ---
 
-## Milestone 3: Albumy z Sonos Favorites i ekran główny (planned)
+## Milestone 3: Albumy z Sonos Favorites i ekran główny (done)
 
 Cel:
 - pobierać z Sonos Favorites / My Sonos tylko albumy i pokazywać je jako kafelki na ekranie głównym
@@ -198,6 +198,7 @@ Kontrakt sprintu:
 
 Uwagi:
 - milestone zależy od wyniku Milestone 1
+- milestone zakończony po poprawkach self-review; realny test Sonos Era 300 zwrócił 64 albumy i 64 linki okładek. Dane SoCo dla Favorites Apple Music nie zawierały wykonawcy ani daty dodania, więc UI używa fallbacku wykonawcy i zachowuje kolejność zwróconą przez Sonos.
 
 ---
 
