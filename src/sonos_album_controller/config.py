@@ -5,13 +5,16 @@ from pathlib import Path
 
 SONOS_SPEAKER_IP_ENV = "SONOS_SPEAKER_IP"
 SONOS_LOG_PATH_ENV = "SONOS_LOG_PATH"
+SONOS_CACHE_PATH_ENV = "SONOS_CACHE_PATH"
 DEFAULT_LOG_PATH = Path.home() / ".sonos-album-controller" / "logs" / "app.log"
+DEFAULT_CACHE_PATH = Path.home() / ".sonos-album-controller" / "cache" / "albums.json"
 
 
 @dataclass(frozen=True)
 class AppConfig:
     sonos_speaker_ip: str | None
     log_path: Path
+    cache_path: Path = DEFAULT_CACHE_PATH
 
 
 def load_config() -> AppConfig:
@@ -21,4 +24,7 @@ def load_config() -> AppConfig:
 
     log_path = os.getenv(SONOS_LOG_PATH_ENV)
     normalized_log_path = Path(log_path).expanduser() if log_path and log_path.strip() else DEFAULT_LOG_PATH
-    return AppConfig(sonos_speaker_ip=speaker_ip, log_path=normalized_log_path)
+
+    cache_path = os.getenv(SONOS_CACHE_PATH_ENV)
+    normalized_cache_path = Path(cache_path).expanduser() if cache_path and cache_path.strip() else DEFAULT_CACHE_PATH
+    return AppConfig(sonos_speaker_ip=speaker_ip, log_path=normalized_log_path, cache_path=normalized_cache_path)

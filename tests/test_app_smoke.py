@@ -12,7 +12,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
 from sonos_album_controller.albums import Album, AlbumsReport  # noqa: E402
-from sonos_album_controller.config import SONOS_LOG_PATH_ENV, SONOS_SPEAKER_IP_ENV  # noqa: E402
+from sonos_album_controller.config import SONOS_CACHE_PATH_ENV, SONOS_LOG_PATH_ENV, SONOS_SPEAKER_IP_ENV  # noqa: E402
 from sonos_album_controller.diagnostics import CacheDiagnostics, DiagnosticsReport  # noqa: E402
 from sonos_album_controller.main import app  # noqa: E402
 
@@ -34,6 +34,7 @@ class AppSmokeTest(unittest.TestCase):
             with patch.dict(
                 "os.environ",
                 {
+                    SONOS_CACHE_PATH_ENV: str(Path(temp_dir) / "albums.json"),
                     SONOS_SPEAKER_IP_ENV: "192.0.2.20",
                     SONOS_LOG_PATH_ENV: str(Path(temp_dir) / "app.log"),
                 },
@@ -77,7 +78,7 @@ class AppSmokeTest(unittest.TestCase):
             ],
         )
 
-        with patch("sonos_album_controller.main.fetch_albums", return_value=report):
+        with patch("sonos_album_controller.main.load_albums", return_value=report):
             response = self.client.get("/api/albums")
 
         self.assertEqual(response.status_code, 200)
@@ -85,6 +86,15 @@ class AppSmokeTest(unittest.TestCase):
         self.assertEqual(body["status"], "ok")
         self.assertEqual(body["albums"][0]["title"], "Album")
         self.assertEqual(body["albums"][0]["artist"], "Artist")
+
+    def test_albums_refresh_endpoint_uses_refresh_service(self) -> None:
+        report = AlbumsReport(status="ok", albums=[])
+
+        with patch("sonos_album_controller.main.refresh_albums", return_value=report):
+            response = self.client.post("/api/albums/refresh")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "ok")
 
     def test_frontend_is_served_from_backend(self) -> None:
         response = self.client.get("/")

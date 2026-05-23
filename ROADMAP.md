@@ -202,7 +202,7 @@ Uwagi:
 
 ---
 
-## Milestone 4: Cache albumów i odświeżanie danych (planned)
+## Milestone 4: Cache albumów i odświeżanie danych (done)
 
 Cel:
 - umożliwić szybkie pokazanie albumów z lokalnego cache i zachować użyteczne dane, gdy Sonos jest niedostępny
@@ -238,7 +238,8 @@ Kontrakt sprintu:
 - stop conditions: nieustalona lokalizacja cache lub brak decyzji o schemacie cache
 
 Uwagi:
-- przed startem doprecyzować TODO ze `spec.md` dotyczące lokalizacji pliku cache
+- lokalizacja cache została doprecyzowana w `spec.md`: domyślnie `~/.sonos-album-controller/cache/albums.json`, z opcjonalnym `SONOS_CACHE_PATH`
+- milestone zakończony po poprawkach self-review; cache zachowuje poprzednie dane przy błędzie odświeżenia, a błąd zapisu cache nie blokuje zwrotu świeżych danych z Sonosa
 
 ---
 

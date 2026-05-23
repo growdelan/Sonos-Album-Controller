@@ -5,6 +5,7 @@ from typing import Any, Callable
 
 from soco import SoCo
 
+from sonos_album_controller.album_cache import cache_status
 from sonos_album_controller.config import AppConfig, SONOS_SPEAKER_IP_ENV
 
 
@@ -47,11 +48,12 @@ def _get_logger(log_path: Path) -> logging.Logger:
     return logger
 
 
-def _empty_cache_status() -> CacheDiagnostics:
+def _cache_status(config: AppConfig) -> CacheDiagnostics:
+    available, last_refresh, status = cache_status(config.cache_path)
     return CacheDiagnostics(
-        available=False,
-        last_refresh=None,
-        status="not_implemented",
+        available=available,
+        last_refresh=last_refresh,
+        status=status,
     )
 
 
@@ -64,7 +66,7 @@ def build_diagnostics(config: AppConfig) -> DiagnosticsReport:
             configured_ip=None,
             connection_status="not_configured",
             last_error=message,
-            cache=_empty_cache_status(),
+            cache=_cache_status(config),
             log_path=str(config.log_path),
         )
 
@@ -72,7 +74,7 @@ def build_diagnostics(config: AppConfig) -> DiagnosticsReport:
         configured_ip=config.sonos_speaker_ip,
         connection_status="configured",
         last_error=None,
-        cache=_empty_cache_status(),
+        cache=_cache_status(config),
         log_path=str(config.log_path),
     )
 
@@ -89,7 +91,7 @@ def test_sonos_connection(
             configured_ip=None,
             connection_status="not_configured",
             last_error=message,
-            cache=_empty_cache_status(),
+            cache=_cache_status(config),
             log_path=str(config.log_path),
         )
 
@@ -103,7 +105,7 @@ def test_sonos_connection(
             configured_ip=config.sonos_speaker_ip,
             connection_status="error",
             last_error=message,
-            cache=_empty_cache_status(),
+            cache=_cache_status(config),
             log_path=str(config.log_path),
         )
 
@@ -111,7 +113,7 @@ def test_sonos_connection(
         configured_ip=config.sonos_speaker_ip,
         connection_status="connected",
         last_error=None,
-        cache=_empty_cache_status(),
+        cache=_cache_status(config),
         log_path=str(config.log_path),
     )
 
