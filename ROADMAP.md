@@ -380,7 +380,7 @@ Uwagi:
 
 ---
 
-## Milestone 8: Jakość audio, pełniejsze błędy i polerowanie UI MVP (planned)
+## Milestone 8: Jakość audio, pełniejsze błędy i polerowanie UI MVP (done)
 
 Cel:
 - domknąć wymagania MVP dotyczące badge jakości audio, obsługi błędów, stanów UI i ciemnego muzycznego wyglądu desktopowego
@@ -419,4 +419,4 @@ Kontrakt sprintu:
 - stop conditions: brak rozstrzygnięcia po PoC, czy jakość audio jest dostępna, albo niewyjaśnione odstępstwa od definicji MVP
 
 Uwagi:
-- milestone wysokiego ryzyka integracyjnego i UX; wymaga osobnego kontraktu sprintu i review przed finalizacją
+- milestone zakończony po poprawkach self-review; zgodnie z PoC jakość audio jest prezentowana jako neutralny fallback `Jakość niedostępna`, bez zgadywania Dolby Atmos/lossless

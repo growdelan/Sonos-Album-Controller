@@ -213,7 +213,40 @@ class PlaybackTest(unittest.TestCase):
         )
 
         self.assertEqual(report.status, "empty")
-        self.assertIn("metadanych albumu", report.message or "")
+        self.assertIn("danych potrzebnych", report.message or "")
+
+    def test_start_album_playback_returns_neutral_audio_quality_fallback(self) -> None:
+        report = start_album_playback(
+            self._config(),
+            "album:1",
+            1,
+            speaker_factory=RecordingSpeaker,
+            music_library_factory=FakeMusicLibrary,
+        )
+
+        self.assertEqual(report.status, "ok")
+        self.assertIsNotNone(report.state)
+        assert report.state is not None
+        self.assertIsNone(report.state.audio_quality)
+
+    def test_start_album_playback_logs_technical_connection_error(self) -> None:
+        class FailingSpeaker(RecordingSpeaker):
+            def __init__(self, speaker_ip: str) -> None:
+                raise RuntimeError("connection refused")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "app.log"
+            report = start_album_playback(
+                AppConfig(sonos_speaker_ip="192.0.2.20", log_path=log_path),
+                "album:1",
+                0,
+                speaker_factory=FailingSpeaker,
+                music_library_factory=FakeMusicLibrary,
+            )
+
+            self.assertEqual(report.status, "error")
+            self.assertNotIn("connection refused", report.message or "")
+            self.assertIn("connection refused", log_path.read_text(encoding="utf-8"))
 
     def test_start_album_playback_without_ip_returns_controlled_state(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

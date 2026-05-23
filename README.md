@@ -46,6 +46,8 @@ Endpointy:
 
 Ograniczenie realnej integracji: dla aktualnych Apple Music Favorites testowanych na Sonos Era 300 metoda SoCo `MusicLibrary.browse` zwraca 0 utworów. Aplikacja ma fallback odtworzenia całego albumu przez `AddURIToQueue` z albumowym URI i metadanymi Favorites; po załadowaniu albumu odczytuje tytuły i czasy utworów z kolejki Sonosa.
 
+Jakość audio jest obsługiwana jako best effort. Aktualny PoC SoCo nie potwierdził wiarygodnego pola jakości audio, więc API zwraca neutralny brak wartości, a UI pokazuje `Jakosc niedostepna` bez zgadywania Dolby Atmos lub lossless. Szczegóły techniczne błędów trafiają do pliku logów, a UI pokazuje komunikaty użytkowe.
+
 ## Testy
 
 ```bash

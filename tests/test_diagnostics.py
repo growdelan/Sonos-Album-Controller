@@ -86,8 +86,11 @@ class DiagnosticsTest(unittest.TestCase):
             )
 
             self.assertEqual(report.connection_status, "error")
-            self.assertIn("connection refused", report.last_error or "")
-            self.assertIn("ERROR", log_path.read_text(encoding="utf-8"))
+            self.assertNotIn("connection refused", report.last_error or "")
+            self.assertIn("Sonos Era 300", report.last_error or "")
+            log_text = log_path.read_text(encoding="utf-8")
+            self.assertIn("ERROR", log_text)
+            self.assertIn("connection refused", log_text)
 
     def test_diagnostics_reports_existing_cache(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

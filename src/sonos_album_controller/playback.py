@@ -4,6 +4,7 @@ from typing import Any, Literal
 from soco import SoCo
 from soco.music_library import MusicLibrary
 
+from sonos_album_controller.app_logging import get_app_logger
 from sonos_album_controller.albums import (
     Album,
     MusicLibraryFactory,
@@ -29,6 +30,7 @@ class PlayerState:
     volume: int | None = None
     muted: bool | None = None
     repeat_mode: RepeatMode = "none"
+    audio_quality: str | None = None
 
 
 @dataclass(frozen=True)
@@ -46,7 +48,9 @@ def start_album_playback(
     speaker_factory: SpeakerFactory = SoCo,
     music_library_factory: MusicLibraryFactory = MusicLibrary,
 ) -> PlaybackReport:
+    logger = get_app_logger(config.log_path)
     if config.sonos_speaker_ip is None:
+        logger.warning("Brak konfiguracji IP glosnika przy starcie odtwarzania.")
         return PlaybackReport(status="not_configured", message=f"Ustaw {SONOS_SPEAKER_IP_ENV}, aby sterowac Sonosem.")
     if track_index < 0:
         return PlaybackReport(status="invalid_request", message="Nieprawidlowy indeks utworu.")
@@ -55,7 +59,11 @@ def start_album_playback(
         speaker = speaker_factory(config.sonos_speaker_ip)
         library = music_library_factory(speaker)
     except Exception as error:
-        return PlaybackReport(status="error", message=f"Nie udalo sie polaczyc z Sonos: {error}")
+        logger.error("Nie udalo sie polaczyc z Sonos przy starcie odtwarzania: %s", error)
+        return PlaybackReport(
+            status="error",
+            message="Nie mozna polaczyc sie z Sonos. Sprawdz, czy glosnik jest wlaczony i czy IP jest poprawne.",
+        )
 
     album_report = fetch_albums(
         config,
@@ -66,15 +74,15 @@ def start_album_playback(
     if album is None:
         return PlaybackReport(status="not_found", message=album_report.message or "Nie znaleziono albumu.")
 
-    album_item_report = _find_typed_album_item(library, album_id)
+    album_item_report = _find_typed_album_item(library, album_id, logger)
     if album_item_report.status != "ok":
         return PlaybackReport(status=album_item_report.status, message=album_item_report.message)
 
     assert album_item_report.item is not None
-    track_items_report = _browse_track_items(library, album_item_report.item)
+    track_items_report = _browse_track_items(library, album_item_report.item, logger)
     if track_items_report.status != "ok":
         if track_items_report.status == "empty" and track_index == 0:
-            return _start_album_container_playback(speaker, album, album_item_report.item)
+            return _start_album_container_playback(speaker, album, album_item_report.item, logger)
         return PlaybackReport(status=track_items_report.status, message=track_items_report.message)
 
     if track_index >= len(track_items_report.tracks):
@@ -86,7 +94,11 @@ def start_album_playback(
             speaker.add_to_queue(item)
         speaker.play_from_queue(track_index)
     except Exception as error:
-        return PlaybackReport(status="error", message=f"Nie udalo sie uruchomic odtwarzania: {error}")
+        logger.error("Nie udalo sie wyczyscic kolejki lub uruchomic odtwarzania: %s", error)
+        return PlaybackReport(
+            status="error",
+            message="Nie udalo sie uruchomic odtwarzania na Sonosie. Sprawdz polaczenie i sproboj ponownie.",
+        )
 
     return PlaybackReport(
         status="ok",
@@ -107,6 +119,7 @@ def set_playback_playing(
     is_playing: bool,
     speaker_factory: SpeakerFactory = SoCo,
 ) -> PlaybackReport:
+    logger = get_app_logger(config.log_path)
     speaker_report = _speaker_from_config(config, speaker_factory)
     if speaker_report.status != "ok":
         return PlaybackReport(status=speaker_report.status, message=speaker_report.message)
@@ -119,7 +132,8 @@ def set_playback_playing(
             speaker_report.speaker.pause()
     except Exception as error:
         action = "wznowic" if is_playing else "wstrzymac"
-        return PlaybackReport(status="error", message=f"Nie udalo sie {action} odtwarzania: {error}")
+        logger.error("Nie udalo sie %s odtwarzania: %s", action, error)
+        return PlaybackReport(status="error", message=f"Nie udalo sie {action} odtwarzania. Sprawdz polaczenie z Sonos.")
 
     return PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=is_playing))
 
@@ -131,6 +145,7 @@ def skip_next(
     repeat_mode: RepeatMode = "none",
     speaker_factory: SpeakerFactory = SoCo,
 ) -> PlaybackReport:
+    logger = get_app_logger(config.log_path)
     if repeat_mode not in ("none", "album", "track"):
         return PlaybackReport(status="invalid_request", message="Nieprawidlowy tryb petli.")
 
@@ -150,7 +165,8 @@ def skip_next(
         else:
             speaker_report.speaker.next()
     except Exception as error:
-        return PlaybackReport(status="error", message=f"Nie udalo sie przejsc do nastepnego utworu: {error}")
+        logger.error("Nie udalo sie przejsc do nastepnego utworu: %s", error)
+        return PlaybackReport(status="error", message="Nie udalo sie przejsc do nastepnego utworu. Sprawdz polaczenie z Sonos.")
 
     return PlaybackReport(
         status="ok",
@@ -166,6 +182,7 @@ def skip_previous(
     repeat_mode: RepeatMode = "none",
     speaker_factory: SpeakerFactory = SoCo,
 ) -> PlaybackReport:
+    logger = get_app_logger(config.log_path)
     if repeat_mode not in ("none", "album", "track"):
         return PlaybackReport(status="invalid_request", message="Nieprawidlowy tryb petli.")
 
@@ -201,7 +218,8 @@ def skip_previous(
             return PlaybackReport(status="ok", state=PlayerState(None, None, 0, is_playing=True, repeat_mode=repeat_mode))
         speaker_report.speaker.previous()
     except Exception as error:
-        return PlaybackReport(status="error", message=f"Nie udalo sie przejsc do poprzedniego utworu: {error}")
+        logger.error("Nie udalo sie przejsc do poprzedniego utworu: %s", error)
+        return PlaybackReport(status="error", message="Nie udalo sie przejsc do poprzedniego utworu. Sprawdz polaczenie z Sonos.")
 
     return PlaybackReport(status="ok", state=PlayerState(None, None, current_index - 1, is_playing=True, repeat_mode=repeat_mode))
 
@@ -211,6 +229,7 @@ def set_repeat_mode(
     repeat_mode: RepeatMode,
     speaker_factory: SpeakerFactory = SoCo,
 ) -> PlaybackReport:
+    logger = get_app_logger(config.log_path)
     if repeat_mode not in ("none", "album", "track"):
         return PlaybackReport(status="invalid_request", message="Nieprawidlowy tryb petli.")
 
@@ -222,12 +241,14 @@ def set_repeat_mode(
     try:
         speaker_report.speaker.play_mode = _sonos_play_mode(repeat_mode)
     except Exception as error:
-        return PlaybackReport(status="error", message=f"Nie udalo sie ustawic trybu petli: {error}")
+        logger.error("Nie udalo sie ustawic trybu petli: %s", error)
+        return PlaybackReport(status="error", message="Nie udalo sie ustawic trybu petli. Sprawdz polaczenie z Sonos.")
 
     return PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=False, repeat_mode=repeat_mode))
 
 
 def set_volume(config: AppConfig, volume: int, speaker_factory: SpeakerFactory = SoCo) -> PlaybackReport:
+    logger = get_app_logger(config.log_path)
     speaker_report = _speaker_from_config(config, speaker_factory)
     if speaker_report.status != "ok":
         return PlaybackReport(status=speaker_report.status, message=speaker_report.message)
@@ -238,11 +259,13 @@ def set_volume(config: AppConfig, volume: int, speaker_factory: SpeakerFactory =
     try:
         speaker_report.speaker.volume = volume
     except Exception as error:
-        return PlaybackReport(status="error", message=f"Nie udalo sie ustawic glosnosci: {error}")
+        logger.error("Nie udalo sie ustawic glosnosci: %s", error)
+        return PlaybackReport(status="error", message="Nie udalo sie ustawic glosnosci. Sprawdz polaczenie z Sonos.")
     return PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=False, volume=volume))
 
 
 def set_muted(config: AppConfig, muted: bool, speaker_factory: SpeakerFactory = SoCo) -> PlaybackReport:
+    logger = get_app_logger(config.log_path)
     speaker_report = _speaker_from_config(config, speaker_factory)
     if speaker_report.status != "ok":
         return PlaybackReport(status=speaker_report.status, message=speaker_report.message)
@@ -251,7 +274,8 @@ def set_muted(config: AppConfig, muted: bool, speaker_factory: SpeakerFactory = 
     try:
         speaker_report.speaker.mute = muted
     except Exception as error:
-        return PlaybackReport(status="error", message=f"Nie udalo sie ustawic mute: {error}")
+        logger.error("Nie udalo sie ustawic mute: %s", error)
+        return PlaybackReport(status="error", message="Nie udalo sie ustawic mute. Sprawdz polaczenie z Sonos.")
     return PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=False, muted=muted))
 
 
@@ -282,19 +306,29 @@ class _TrackItemsReport:
 
 
 def _speaker_from_config(config: AppConfig, speaker_factory: SpeakerFactory) -> _SpeakerReport:
+    logger = get_app_logger(config.log_path)
     if config.sonos_speaker_ip is None:
+        logger.warning("Brak konfiguracji IP glosnika przy operacji playback.")
         return _SpeakerReport(status="not_configured", message=f"Ustaw {SONOS_SPEAKER_IP_ENV}, aby sterowac Sonosem.")
     try:
         return _SpeakerReport(status="ok", speaker=speaker_factory(config.sonos_speaker_ip))
     except Exception as error:
-        return _SpeakerReport(status="error", message=f"Nie udalo sie polaczyc z Sonos: {error}")
+        logger.error("Nie udalo sie polaczyc z Sonos przy operacji playback: %s", error)
+        return _SpeakerReport(
+            status="error",
+            message="Nie mozna polaczyc sie z Sonos. Sprawdz, czy glosnik jest wlaczony i czy IP jest poprawne.",
+        )
 
 
-def _find_typed_album_item(library: Any, album_id: str) -> _AlbumItemReport:
+def _find_typed_album_item(library: Any, album_id: str, logger: Any) -> _AlbumItemReport:
     try:
         typed_result = library.get_sonos_favorites(max_items=100)
     except Exception as error:
-        return _AlbumItemReport(status="error", message=f"Nie udalo sie pobrac Favorites z Sonosa: {error}")
+        logger.error("Nie udalo sie pobrac Favorites przy starcie odtwarzania: %s", error)
+        return _AlbumItemReport(
+            status="error",
+            message="Nie udalo sie odczytac albumu z Sonos Favorites. Sprawdz polaczenie i sproboj ponownie.",
+        )
 
     for item in _iter_search_result_items(typed_result):
         album = normalize_album(item)
@@ -304,15 +338,16 @@ def _find_typed_album_item(library: Any, album_id: str) -> _AlbumItemReport:
     return _AlbumItemReport(status="not_found", message="Nie znaleziono albumu w typowanych Sonos Favorites.")
 
 
-def _browse_track_items(library: Any, album_item: Any) -> _TrackItemsReport:
+def _browse_track_items(library: Any, album_item: Any, logger: Any) -> _TrackItemsReport:
     try:
         browse_result = library.browse(album_item, max_items=100)
     except Exception as error:
+        logger.error("Nie udalo sie pobrac listy utworow przy starcie odtwarzania: %s", error)
         return _TrackItemsReport(
             status="error",
             raw_items=[],
             tracks=[],
-            message=f"Nie udalo sie pobrac listy utworow albumu: {error}",
+            message="Nie udalo sie pobrac listy utworow dla tego albumu. Mozesz sprobowac odtworzyc caly album.",
         )
 
     raw_items = []
@@ -329,13 +364,13 @@ def _browse_track_items(library: Any, album_item: Any) -> _TrackItemsReport:
             status="empty",
             raw_items=[],
             tracks=[],
-            message="Sonos nie zwrocil listy utworow dla tego albumu.",
+            message="Sonos nie udostepnia listy utworow przed odtworzeniem tego albumu. Mozesz uruchomic caly album.",
         )
 
     return _TrackItemsReport(status="ok", raw_items=raw_items, tracks=tracks)
 
 
-def _start_album_container_playback(speaker: Any, album: Album, album_item: Any) -> PlaybackReport:
+def _start_album_container_playback(speaker: Any, album: Album, album_item: Any, logger: Any) -> PlaybackReport:
     metadata = _first_existing_text(
         getattr(album_item, "resource_meta_data", None),
         getattr(album_item, "metadata", None),
@@ -344,7 +379,7 @@ def _start_album_container_playback(speaker: Any, album: Album, album_item: Any)
     if metadata is None:
         return PlaybackReport(
             status="empty",
-            message="Sonos nie zwrocil listy utworow ani metadanych albumu potrzebnych do odtworzenia.",
+            message="Sonos nie udostepnil danych potrzebnych do odtworzenia tego albumu.",
         )
 
     try:
@@ -362,7 +397,11 @@ def _start_album_container_playback(speaker: Any, album: Album, album_item: Any)
         added_count = _safe_int(add_result.get("NumTracksAdded")) if isinstance(add_result, dict) else None
         tracks = _queue_tracks(speaker, added_count or 100)
     except Exception as error:
-        return PlaybackReport(status="error", message=f"Nie udalo sie uruchomic odtwarzania albumu: {error}")
+        logger.error("Nie udalo sie dodac albumu do kolejki przez AddURIToQueue: %s", error)
+        return PlaybackReport(
+            status="error",
+            message="Nie udalo sie dodac albumu do kolejki Sonosa. Sprawdz polaczenie i sproboj ponownie.",
+        )
 
     current_track = tracks[0] if tracks else None
 
