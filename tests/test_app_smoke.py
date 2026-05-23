@@ -16,6 +16,7 @@ from sonos_album_controller.albums import Album, AlbumsReport, Track  # noqa: E4
 from sonos_album_controller.config import SONOS_CACHE_PATH_ENV, SONOS_LOG_PATH_ENV, SONOS_SPEAKER_IP_ENV  # noqa: E402
 from sonos_album_controller.diagnostics import CacheDiagnostics, DiagnosticsReport  # noqa: E402
 from sonos_album_controller.main import app  # noqa: E402
+from sonos_album_controller.playback import PlaybackReport, PlayerState  # noqa: E402
 
 
 class AppSmokeTest(unittest.TestCase):
@@ -119,12 +120,64 @@ class AppSmokeTest(unittest.TestCase):
         self.assertEqual(response.json()["album"]["title"], "Album")
         self.assertEqual(response.json()["tracks"][0]["title"], "Opening")
 
+    def test_playback_start_endpoint_uses_playback_service(self) -> None:
+        album = Album(
+            id="album:1",
+            title="Album",
+            artist="Artist",
+            uri="album:1",
+            album_art_uri=None,
+            date_added=None,
+        )
+        report = PlaybackReport(
+            status="ok",
+            state=PlayerState(
+                album=album,
+                track=Track(number=2, title="Second", duration="0:04:01", uri="track:2"),
+                track_index=1,
+                is_playing=True,
+                volume=30,
+                muted=False,
+            ),
+        )
+
+        with patch("sonos_album_controller.main.start_album_playback", return_value=report) as start_playback:
+            response = self.client.post("/api/playback/start", json={"album_id": "album:1", "track_index": 1})
+
+        self.assertEqual(response.status_code, 200)
+        start_playback.assert_called_once()
+        body = response.json()
+        self.assertEqual(body["status"], "ok")
+        self.assertEqual(body["state"]["track"]["title"], "Second")
+        self.assertTrue(body["state"]["is_playing"])
+
+    def test_playback_volume_endpoint_uses_playback_service(self) -> None:
+        report = PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=False, volume=55))
+
+        with patch("sonos_album_controller.main.set_volume", return_value=report) as update_volume:
+            response = self.client.post("/api/playback/volume", json={"volume": 55})
+
+        self.assertEqual(response.status_code, 200)
+        update_volume.assert_called_once()
+        self.assertEqual(response.json()["state"]["volume"], 55)
+
+    def test_playback_next_endpoint_passes_player_context(self) -> None:
+        report = PlaybackReport(status="ok", state=PlayerState(None, None, 2, is_playing=True))
+
+        with patch("sonos_album_controller.main.skip_next", return_value=report) as skip:
+            response = self.client.post("/api/playback/next", json={"current_index": 1, "track_count": 3})
+
+        self.assertEqual(response.status_code, 200)
+        skip.assert_called_once()
+        self.assertEqual(response.json()["state"]["track_index"], 2)
+
     def test_frontend_is_served_from_backend(self) -> None:
         response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Sonos Album Controller", response.text)
         self.assertIn("Odswiez albumy", response.text)
+        self.assertIn("play-pause-control-button", response.text)
         self.assertIn("/static/app.js", response.text)
 
 

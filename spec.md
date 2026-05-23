@@ -82,6 +82,11 @@ Miejsca wymagające walidacji lub smoke testów:
 - Konsekwencje: Projekt ma zależność runtime `soco`; dostępność Favorites, rozwijanie albumów Apple Music, tryby pętli i jakość audio muszą zostać potwierdzone w PoC przed pełną implementacją MVP.
 - Dotyczy PRD / milestone’u: PRD 4.2, 12, 13; Milestone 1.
 
+- Decyzja: Dla Apple Music Favorites, których SoCo nie rozwija przez `MusicLibrary.browse`, aplikacja odtwarza album przez `AddURIToQueue` z albumowym URI i metadanymi Favorites, a listę utworów odczytuje z kolejki Sonosa po załadowaniu albumu.
+- Uzasadnienie: Realny Sonos Era 300 zwraca 0 utworów z `MusicLibrary.browse` dla albumów Apple Music Favorites, ale poprawnie ładuje cały album przez albumowy kontener i udostępnia utwory w kolejce.
+- Konsekwencje: Tracklista dla takich albumów nie jest znana przed uruchomieniem fallbacku; samo wejście w album nie może niszczyć bieżącej kolejki tylko po to, aby odkryć utwory.
+- Dotyczy PRD / milestone’u: PRD 4.3, FR-8, FR-9, FR-10; Milestone 6.
+
 - Decyzja: Frontend MVP będzie statycznym HTML + CSS + vanilla JavaScript bez zależności frontendowych, jeśli zakres nie wymusi inaczej.
 - Uzasadnienie: PRD wymaga prostego lokalnego UI i preferuje brak zależności frontendowych.
 - Konsekwencje: Logika widoku, lokalnego paska postępu i stanów playera będzie utrzymywana w prostym kodzie JS, z testami lub smoke testami tam, gdzie ma to sens.

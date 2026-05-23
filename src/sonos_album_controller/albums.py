@@ -28,6 +28,7 @@ class Track:
     number: int
     title: str
     duration: str | None
+    uri: str | None = None
 
 
 @dataclass(frozen=True)
@@ -176,7 +177,7 @@ def normalize_track(item: Any, fallback_number: int) -> Track | None:
         _read_value(item, "res_duration"),
         *_resource_values(item, "duration"),
     )
-    return Track(number=number, title=title, duration=duration)
+    return Track(number=number, title=title, duration=duration, uri=_effective_uri(item))
 
 
 def _dedupe_albums(albums: list[Album]) -> list[Album]:
