@@ -243,7 +243,7 @@ Uwagi:
 
 ---
 
-## Milestone 5: Widok albumu, lista utworów i player bez odtwarzania (planned)
+## Milestone 5: Widok albumu, lista utworów i player bez odtwarzania (done)
 
 Cel:
 - umożliwić wejście z kafelka do widoku albumu z listą utworów i widocznym playerem w stanie `Nic nie odtwarza`
@@ -284,6 +284,7 @@ Kontrakt sprintu:
 
 Uwagi:
 - milestone zależy od Milestone 1 i Milestone 3
+- milestone zakończony po poprawkach self-review; widok albumu, fallback błędu listy utworów, player bez odtwarzania oraz przygotowane lokalnie kontrolki głośności/mute zostały zweryfikowane
 
 ---
 

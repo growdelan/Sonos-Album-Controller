@@ -11,7 +11,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from sonos_album_controller.albums import Album, AlbumsReport  # noqa: E402
+from sonos_album_controller.album_detail import AlbumDetailReport  # noqa: E402
+from sonos_album_controller.albums import Album, AlbumsReport, Track  # noqa: E402
 from sonos_album_controller.config import SONOS_CACHE_PATH_ENV, SONOS_LOG_PATH_ENV, SONOS_SPEAKER_IP_ENV  # noqa: E402
 from sonos_album_controller.diagnostics import CacheDiagnostics, DiagnosticsReport  # noqa: E402
 from sonos_album_controller.main import app  # noqa: E402
@@ -95,6 +96,28 @@ class AppSmokeTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
+
+    def test_album_detail_endpoint_uses_detail_service(self) -> None:
+        report = AlbumDetailReport(
+            status="ok",
+            album=Album(
+                id="album:1",
+                title="Album",
+                artist="Artist",
+                uri="album:1",
+                album_art_uri="https://example.test/cover.jpg",
+                date_added=None,
+            ),
+            tracks=[Track(number=1, title="Opening", duration="0:03:12")],
+        )
+
+        with patch("sonos_album_controller.main.load_album_detail", return_value=report) as load_detail:
+            response = self.client.get("/api/albums/album%3A1")
+
+        self.assertEqual(response.status_code, 200)
+        load_detail.assert_called_once()
+        self.assertEqual(response.json()["album"]["title"], "Album")
+        self.assertEqual(response.json()["tracks"][0]["title"], "Opening")
 
     def test_frontend_is_served_from_backend(self) -> None:
         response = self.client.get("/")

@@ -11,10 +11,10 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Aktualny milestone / batch
 
-- Aktualny milestone: Milestone 4: Cache albumów i odświeżanie danych
-- Status: zakończone, pozytywny self-review po poprawkach; zapisane w commit `90325b0` i wypchnięte na `origin/codex/milestone-4`
+- Aktualny milestone: Milestone 5: Widok albumu, lista utworów i player bez odtwarzania
+- Status: zakończony, sfinalizowany commitem `c29e929` i wypchnięty na `origin/codex/milestone-5`
 - Kontrakt sprintu: utworzony przed implementacją w odpowiedzi agenta; profil `openai_patch`, format patch/diff przez `apply_patch`
-- Zakres poza bieżącą pracą: widok szczegółów albumu, kliknięcie utworu i kolejka Sonosa, player, jakość audio
+- Zakres poza bieżącą pracą: kliknięcie utworu uruchamiające Sonosa, play/pause i next/previous, lokalny pasek postępu, tryby pętli, badge jakości audio poza miejscem w UI
 
 ## Co działa
 
@@ -29,6 +29,8 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 - Istnieje endpoint `GET /api/albums`, normalizacja albumów z Favorites oraz ekran główny z kafelkami, przyciskiem `Odśwież albumy`, stanem pustym i błędem.
 - Istnieje lokalny cache albumów w `~/.sonos-album-controller/cache/albums.json`, z opcjonalnym `SONOS_CACHE_PATH`.
 - Endpointy albumów zapisują cache po udanym odświeżeniu i zwracają istniejący cache przy błędzie odświeżenia.
+- Istnieje endpoint szczegółów albumu `GET /api/albums/{album_id}` zwracający metadane albumu, listę utworów jeśli SoCo potrafi ją rozwinąć oraz kontrolowany komunikat błędu, gdy lista utworów jest niedostępna.
+- UI pozwala wejść z kafelka do widoku albumu, pokazuje dużą okładkę, metadane, listę utworów lub błąd oraz player w stanie `Nic nie odtwarza`.
 
 ## Co jest skończone
 
@@ -39,14 +41,16 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 - Milestone 2 został zaimplementowany jako konfiguracja, diagnostyka i obsługa błędów połączenia, z walidacją automatyczną, testem Browser na realnym Sonos Era 300 i pozytywnym self-review po poprawce loggera.
 - Milestone 3 został zaimplementowany jako endpoint albumów z Sonos Favorites i ekran główny z kafelkami, z walidacją automatyczną, Browser smoke i realnym testem na Sonos Era 300.
 - Milestone 4 został zaimplementowany jako trwały cache albumów i odświeżanie danych, z walidacją automatyczną, smoke HTTP i pozytywnym self-review po poprawkach.
+- Milestone 5 został zaimplementowany jako widok albumu, lista utworów best effort i player bez odtwarzania, z walidacją automatyczną, smoke HTTP, Browser smoke i pozytywnym self-review po poprawkach.
 
 ## Co jest w trakcie
 
+- Brak aktywnej implementacji; Milestone 5 został sfinalizowany i wypchnięty.
 
 ## Co jest następne
 
-- Rozpocząć Milestone 5: Widok albumu, lista utworów i player bez odtwarzania.
-- Przed milestone’ami zależnymi od list utworów rozstrzygnąć ograniczenie `album_track_expansion=0` dla Favorites Apple Music.
+- Rozpocząć Milestone 6: start od wybranego utworu, kolejka i podstawowe sterowanie.
+- Przed milestone’ami sterowania odtwarzaniem uwzględnić ograniczenie `album_track_expansion=0` dla Favorites Apple Music.
 
 ## Walidacja
 
@@ -70,6 +74,12 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Milestone 4 testy cache bez IO | `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check` | PASS | 28 testów PASS; pokryto zapis/odczyt cache, sukces odświeżenia, błąd z istniejącym cache, błąd bez cache, konfigurację `SONOS_CACHE_PATH`, diagnostykę cache i endpoint refresh. |
 | 2026-05-23 | Milestone 4 smoke HTTP cache | `uv run uvicorn sonos_album_controller.main:app --app-dir src --host 127.0.0.1 --port 8000`; `curl -sS http://127.0.0.1:8000/api/albums`; `curl -sS -X POST http://127.0.0.1:8000/api/albums/refresh`; restart bez `SONOS_SPEAKER_IP` z tym samym `SONOS_CACHE_PATH`; `curl -sS http://127.0.0.1:8000/api/albums`; restart bez cache; `curl -sS http://127.0.0.1:8000/api/albums` | PASS | Sonos dostępny zapisał cache z `status: ok` i `source: sonos`; bez IP z istniejącym cache zwrócił `status: cached`, `source: cache` i diagnostykę `cache.available=true`; bez IP i bez cache zwrócił kontrolowane `not_configured`. |
 | 2026-05-23 | Milestone 4 poprawki po self-review | `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check` | PASS | 29 testów PASS; poprawiono komunikat UI dla pustego cache oraz odporność odświeżenia na błąd zapisu cache. |
+| 2026-05-23 | Milestone 5 testy automatyczne bez IO | `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check` | PASS | 35 testów PASS; pokryto normalizację tracków, rozwijanie albumu przez fake `MusicLibrary.browse`, kontrolowany brak IP, szczegół albumu z cache i endpoint FastAPI. |
+| 2026-05-23 | Milestone 5 smoke HTTP bez realnego Sonosa | `SONOS_SPEAKER_IP= SONOS_CACHE_PATH=<temp>/albums.json uv run uvicorn sonos_album_controller.main:app --app-dir src --host 127.0.0.1 --port 8000`; `curl -sS http://127.0.0.1:8000/api/albums`; `curl -sS http://127.0.0.1:8000/api/albums/album%3A1` | PASS | Lista albumów wróciła z cache jako `status: cached`; szczegół albumu zwrócił metadane albumu i `status: tracks_unavailable` z komunikatem o wymaganym `SONOS_SPEAKER_IP`. |
+| 2026-05-23 | Milestone 5 Browser smoke UI | `@Browser` na `http://127.0.0.1:8000`; kliknięcie kafelka albumu; kliknięcie `Powrot do albumow`; kontrola layoutu desktop i 390x844 | PASS | UI pokazał `Smoke Album`, komunikat niedostępnej listy utworów, player `Nic nie odtwarza`, 0 utworów i działający powrót; kontrola layoutu nie wykazała wyjścia tekstu poza kontener. |
+| 2026-05-23 | Milestone 5 poprawki po self-review | `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; `@Browser` smoke aktywnych kontrolek głośności/mute | PASS | 35 testów PASS; suwak głośności i przycisk mute są aktywne w widoku albumu, `Mute` przełącza się lokalnie na `Unmute`; README i handoff zostały uzupełnione. |
+| 2026-05-23 | Finalizacja Milestone 5 przed commitem | `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check` | PASS | 35 testów PASS; brak błędów whitespace w diffie. |
+| 2026-05-23 | Wrap-up po finalizacji Milestone 5 | `git status --short --branch`; `git log -1 --oneline --decorate` | PASS | Working tree czysty; `HEAD` i `origin/codex/milestone-5` wskazują commit `c29e929`. |
 
 ## Review
 
@@ -84,6 +94,8 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Self-review Milestone 3 po poprawkach | PASS | brak | Finalizacja operacyjna, commit i push. |
 | 2026-05-23 | Self-review Milestone 4 | P2 | UI ukrywał ostrzeżenie dla pustego cache; błąd zapisu cache mógł blokować zwrot świeżych danych z Sonosa | Poprawki wdrożone; wykonać ponowny self-review przed finalizacją. |
 | 2026-05-23 | Self-review Milestone 4 po poprawkach | PASS | brak | Finalizacja operacyjna, commit i push. |
+| 2026-05-23 | Self-review Milestone 5 | P2 | Kontrolki głośności/mute były nieaktywne mimo DoD; README nie dokumentował endpointu szczegółu albumu; STATUS miał nieaktualny handoff | Poprawki wdrożone; wykonano ponowny self-review przed finalizacją. |
+| 2026-05-23 | Self-review Milestone 5 po poprawkach | PASS | brak | Finalizacja operacyjna, commit i push. |
 
 ## Błędy narzędzi i odzyskiwanie
 
@@ -99,6 +111,9 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 | 2026-05-23 | Browser runtime | InvalidArguments | Kolizja nazwy zmiennej `refreshButton` w utrzymywanym runtime JS | Powtórzono smoke z unikalnymi nazwami zmiennych | nie |
 | 2026-05-23 | `python` bez `uv run` do introspekcji SoCo | InvalidArguments | Interpreter poza środowiskiem `uv` nie widział zależności `soco` | Powtórzono przez `uv run` | nie |
 | 2026-05-23 | `uv run python` bez `PYTHONPATH=src` | InvalidArguments | Skrypt walidacyjny nie widział pakietu `sonos_album_controller` | Powtórzono z `PYTHONPATH=src` | nie |
+| 2026-05-23 | `apply_patch` dla dużego hunka `static/app.js` | InvalidArguments | Patch nie dopasował kontekstu w pliku JS | Rozbito zmianę na mniejsze hunki `apply_patch` | nie |
+| 2026-05-23 | Smoke HTTP Milestone 5 | UnexpectedEnvironment | Proces serwera odziedziczył `SONOS_SPEAKER_IP` i pobrał realne albumy zamiast izolowanego cache | Zatrzymano serwer, uruchomiono ponownie z jawnie pustym `SONOS_SPEAKER_IP=` i odtworzono temp cache | nie |
+| 2026-05-23 | Browser smoke poprawek Milestone 5 | UnexpectedEnvironment | Utrzymywany uchwyt zakładki nie należał już do aktywnej sesji Browser | Utworzono nową zakładkę w `@Browser` i powtórzono smoke kontrolek | nie |
 
 ## Keep rate / trwałość zmian
 
@@ -112,6 +127,7 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 | 2026-05-22 | Milestone 2 konfiguracja i diagnostyka | `src/`, `tests/`, `README.md`, `spec.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawce self-review | Jedyna poprawka dotyczyła handlerów loggera; zakres milestone’u, API diagnostyki i UI przetrwały ponowny review bez problemów krytycznych. |
 | 2026-05-23 | Milestone 3 albumy z Favorites i ekran główny | `src/`, `tests/`, `README.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review | Poprawki ograniczyły się do scalania bogatszych metadanych okładek i dokumentacji operacyjnej; frontend bez nowych zależności i testy bez realnego Sonosa zostały utrzymane. |
 | 2026-05-23 | Milestone 4 cache albumów i odświeżanie danych | `src/`, `tests/`, `README.md`, `spec.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review | Poprawki ograniczyły się do ostrzeżenia UI dla pustego cache i odporności na błąd zapisu cache; zakres milestone’u, brak nowych zależności i testy bez realnego Sonosa zostały utrzymane. |
+| 2026-05-23 | Milestone 5 widok albumu i player bez odtwarzania | `src/`, `tests/`, `README.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review | Poprawki po self-review ograniczyły się do aktywnych lokalnie kontrolek głośności/mute, dokumentacji endpointu szczegółu albumu i aktualizacji handoffu; ponowny self-review nie wykrył problemów krytycznych. |
 
 ## Blokery i ryzyka
 
@@ -122,10 +138,10 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 
 ## Handoff do następnej sesji
 
-- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, a Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review.
+- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, a Milestone 5 ma zakończony widok albumu i player bez odtwarzania po pozytywnym self-review oraz finalizacji na gałęzi `codex/milestone-5`.
 - Decyzje, których nie wolno zgubić: FastAPI + SoCo, statyczny frontend HTML/CSS/vanilla JS, jeden Sonos Era 300 po stałym IP z `SONOS_SPEAKER_IP`, cache albumów w `~/.sonos-album-controller/cache/albums.json` albo `SONOS_CACHE_PATH`, jakość audio best effort, testy automatyczne bez realnego Sonosa.
-- Pliki, które warto doczytać jako pierwsze: `AGENTS.md`, `STATUS.md`, `spec.md`, `ROADMAP.md`, `src/sonos_album_controller/album_cache.py`, `src/sonos_album_controller/album_refresh.py`, `src/sonos_album_controller/albums.py`, `tests/test_album_cache.py`.
-- Następny bezpieczny krok: rozpocząć Milestone 5; przed pracą z listami utworów uwzględnić ograniczenie `album_track_expansion=0` dla Favorites Apple Music.
+- Pliki, które warto doczytać jako pierwsze: `AGENTS.md`, `STATUS.md`, `spec.md`, `ROADMAP.md`, `src/sonos_album_controller/album_detail.py`, `src/sonos_album_controller/albums.py`, `src/sonos_album_controller/static/app.js`, `tests/test_albums.py`, `tests/test_album_cache.py`.
+- Następny bezpieczny krok: rozpocząć Milestone 6 od kontraktu sprintu; przed pracą z listami utworów w sterowaniu odtwarzaniem uwzględnić ograniczenie `album_track_expansion=0` dla Favorites Apple Music.
 - Czego nie robić: nie zaczynać pełnej integracji z Sonosem przed PoC z Milestone 1; nie dodawać zależności frontendowych bez potrzeby.
 
 ## Ostatnie aktualizacje
@@ -145,3 +161,6 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-23: Zaimplementowano Milestone 4 lokalnie: `SONOS_CACHE_PATH`, trwały cache albumów JSON, endpoint `POST /api/albums/refresh`, fallback do cache przy błędzie odświeżenia, diagnostykę cache i komunikaty UI dla danych z cache; milestone wymaga self-review.
 - 2026-05-23: Po self-review Milestone 4 poprawiono komunikat dla pustego cache i obsługę błędu zapisu cache przy świeżych danych z Sonosa; milestone wymaga ponownego self-review.
 - 2026-05-23: Sfinalizowano Milestone 4 commitem `90325b0` i pushem gałęzi `codex/milestone-4` do `origin`.
+- 2026-05-23: Zaimplementowano Milestone 5 lokalnie: endpoint szczegółów albumu, próbę rozwijania listy utworów przez `MusicLibrary.browse`, widok albumu w UI, pusty player i powrót do albumów; milestone wymaga self-review.
+- 2026-05-23: Po self-review Milestone 5 uaktywniono lokalne kontrolki głośności/mute w stanie przygotowanym, uzupełniono README i handoff, a ponowny self-review zakończył się bez problemów krytycznych.
+- 2026-05-23: Sfinalizowano Milestone 5 commitem `c29e929` i pushem gałęzi `codex/milestone-5` do `origin`; wrap-up potwierdził czysty working tree.
