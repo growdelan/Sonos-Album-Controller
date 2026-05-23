@@ -12,7 +12,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 ## Aktualny milestone / batch
 
 - Aktualny milestone: Milestone 10: Wybór piosenki z widocznej listy
-- Status: zakończony po pozytywnym self-review; przygotowywany do commita i pusha na gałęzi `codex/wybor-piosenki-z-listy`
+- Status: zakończony po pozytywnym self-review, zapisany commitem `9b8a316` na gałęzi `codex/wybor-piosenki-z-listy` i wypchnięty do `origin`
 - Kontrakt sprintu: utworzony przed implementacją w odpowiedzi agenta; profil `openai_patch`, format patch/diff przez `apply_patch`
 - Zakres poza bieżącą pracą: nowe źródła muzyki, playlisty/radio/pojedyncze utwory spoza albumów, wyszukiwanie w trackliście, drag-and-drop kolejki, seek, aktywna synchronizacja zmian spoza aplikacji, przebudowa całego UI, nowe zależności
 
@@ -58,11 +58,11 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Co jest w trakcie
 
-- Brak aktywnej implementacji; Milestone 10 jest zakończony po pozytywnym self-review i finalizowany operacyjnie.
+- Brak aktywnej implementacji; Milestone 10 jest zakończony, zapisany w repo i wypchnięty do `origin/codex/wybor-piosenki-z-listy`.
 
 ## Co jest następne
 
-- Wykonać commit i push Milestone 10, a kolejny przyrost rozpocząć od nowego PRD albo decyzji produktowej.
+- Rozpocząć kolejny przyrost od nowego PRD albo decyzji produktowej.
 
 ## Walidacja
 
@@ -121,6 +121,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Milestone 10 implementacja lokalna | `uv run python -m unittest tests.test_playback tests.test_app_smoke`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `uv run python -m py_compile src/sonos_album_controller/playback.py src/sonos_album_controller/main.py`; `git diff --check` | PASS | 64 testy PASS; dodano endpoint wyboru indeksu w aktualnej kolejce, frontendowy wybór widocznego utworu po załadowaniu tracklisty i regresje statyczne/serwisowe. |
 | 2026-05-23 | Milestone 10 Browser smoke z fake backendem bez realnego Sonosa | `@Browser` na `http://127.0.0.1:8030`; kliknięcie albumu, `Odtworz album`, kliknięcie drugiego utworu, `Następny`, `Poprzedni`, Enter i Space na trackliście; `GET /api/smoke-state-10` | PASS | Smoke potwierdził jedno pełne ładowanie albumu i 3 przeskoki przez `/api/playback/select`; player pokazał `Second Choice`, `Finale`, powrót do `Second Choice`, `Opening` po Enter i `Finale` po Space. |
 | 2026-05-23 | Milestone 10 equalizer aktywnego utworu i finalna walidacja | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `uv run python -m py_compile src/sonos_album_controller/playback.py src/sonos_album_controller/main.py`; `git diff --check`; `@Browser` na `http://127.0.0.1:8031` | PASS | 64 testy PASS; smoke potwierdził, że grający utwór ma trzy-słupkowy equalizer, po pauzie wskaźnik znika i zostaje statyczny symbol `▶`; składnia JS/Python i diff poprawne. |
+| 2026-05-23 | Push Milestone 10 | `git push -u origin codex/wybor-piosenki-z-listy` | PASS | Gałąź `codex/wybor-piosenki-z-listy` wypchnięta do `origin`; commit implementacyjny: `9b8a316`. |
 
 ## Review
 
@@ -253,3 +254,4 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-23: Zaimplementowano Milestone 10 lokalnie: endpoint przeskoku do indeksu w aktualnej kolejce, frontendowy wybór widocznego utworu po załadowaniu tracklisty, obsługę Enter/Space i regresje testowe; milestone wymaga self-review.
 - 2026-05-23: Po manualnej uwadze UX dodano mały trzy-słupkowy equalizer przy aktualnie grającym utworze; Browser smoke potwierdził wskaźnik podczas odtwarzania i statyczny symbol po pauzie.
 - 2026-05-23: Self-review Milestone 10 po equalizerze zakończył się bez problemów krytycznych; dokumentacja operacyjna została przygotowana do commita i pusha.
+- 2026-05-23: Sfinalizowano Milestone 10 commitem `9b8a316` i pushem gałęzi `codex/wybor-piosenki-z-listy` do `origin`; przygotowano wrap-up statusu.
