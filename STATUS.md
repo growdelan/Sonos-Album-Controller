@@ -12,7 +12,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 ## Aktualny milestone / batch
 
 - Aktualny milestone: Milestone 8: Jakość audio, pełniejsze błędy i polerowanie UI MVP
-- Status: zakończony po pozytywnym self-review, przygotowany do commita i pusha
+- Status: zakończony po pozytywnym self-review, sfinalizowany commitem `91b954c` i wypchnięty na `origin/codex/milestone-8`
 - Kontrakt sprintu: utworzony przed implementacją w odpowiedzi agenta; profil `openai_patch`, format patch/diff przez `apply_patch`
 - Zakres poza bieżącą pracą: nowe funkcje poza PRD, zdalny dostęp, logowanie użytkowników, obsługa wielu głośników, konteneryzacja, zgadywanie jakości audio bez danych
 
@@ -54,11 +54,11 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Co jest w trakcie
 
-- Brak aktywnej implementacji; Milestone 8 jest gotowy do finalizacji na gałęzi `codex/milestone-8`.
+- Brak aktywnej implementacji; Milestone 8 został sfinalizowany na gałęzi `codex/milestone-8`.
 
 ## Co jest następne
 
-- Wykonać commit i push Milestone 8, a po nim wrap-up stanu repo.
+- Rozpocząć kolejny przyrost od nowego PRD albo decyzji produktowej; kandydat techniczny do osobnego PoC to sprawdzenie, czy wykonawcę da się wydobyć z XML metadanych Favorites albo kolejki Sonosa po starcie albumu.
 
 ## Walidacja
 
@@ -105,6 +105,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Milestone 8 Browser smoke z fake backendem bez realnego Sonosa | `@Browser` na `http://127.0.0.1:8028` z tymczasowym backendem smoke; kliknięcie albumu, utworu i pętli | PASS | UI pokazał ciemny styl, widok albumu, player `Odtwarzanie: Opening`, badge `Jakosc niedostepna`, pętlę `Petla albumu` i lokalny postęp `value=50`. |
 | 2026-05-23 | Poprawki po self-review Milestone 8 | `uv run python -m unittest tests.test_diagnostics`; `uv run python -m unittest discover -s tests -p "test_*.py"`; rozszerzony `@Browser` smoke na `http://127.0.0.1:8029`; `curl -sS http://127.0.0.1:8029/api/smoke-state` | PASS | 59 testów PASS; diagnostyka nie pokazuje surowego `connection refused` w UI, szczegół zostaje w logu; Browser smoke objął cache warning, odświeżenie, album detail, start, next, previous, play/pause, pętlę, volume 77, mute i test diagnostyki. |
 | 2026-05-23 | Finalizacja Milestone 8 przed commitem | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `uv run python -m py_compile src/sonos_album_controller/app_logging.py src/sonos_album_controller/diagnostics.py src/sonos_album_controller/albums.py src/sonos_album_controller/album_refresh.py src/sonos_album_controller/playback.py src/sonos_album_controller/main.py`; `git diff --check` | PASS | 59 testów PASS; składnia JS i Python poprawna; brak błędów whitespace w diffie. |
+| 2026-05-23 | Wrap-up po finalizacji Milestone 8 | `git status --short --branch`; `git log -1 --oneline --decorate` | PASS | Working tree czysty; `HEAD` i `origin/codex/milestone-8` wskazują commit `91b954c`. |
 
 ## Review
 
@@ -181,7 +182,7 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, Milestone 5 ma zakończony widok albumu i player bez odtwarzania, Milestone 6 ma zakończony playback z fallbackiem `AddURIToQueue` i odczytem tracklisty z kolejki Sonosa po starcie albumu, Milestone 7 ma zakończone tryby pętli i lokalny pasek postępu po pozytywnym self-review, a Milestone 8 ma zakończony neutralny badge jakości audio, nietechniczne błędy/logi i ciemne polerowanie UI MVP po pozytywnym self-review.
 - Decyzje, których nie wolno zgubić: FastAPI + SoCo, statyczny frontend HTML/CSS/vanilla JS, jeden Sonos Era 300 po stałym IP z `SONOS_SPEAKER_IP`, cache albumów w `~/.sonos-album-controller/cache/albums.json` albo `SONOS_CACHE_PATH`, jakość audio best effort, testy automatyczne bez realnego Sonosa.
 - Pliki, które warto doczytać jako pierwsze: `AGENTS.md`, `STATUS.md`, `spec.md`, `ROADMAP.md`, `src/sonos_album_controller/app_logging.py`, `src/sonos_album_controller/playback.py`, `src/sonos_album_controller/albums.py`, `src/sonos_album_controller/static/app.js`, `src/sonos_album_controller/static/styles.css`, `tests/test_playback.py`, `tests/test_app_smoke.py`.
-- Następny bezpieczny krok: wykonać commit i push Milestone 8, a potem rozpocząć kolejny przyrost od nowego PRD albo decyzji produktowej.
+- Następny bezpieczny krok: rozpocząć kolejny przyrost od nowego PRD albo decyzji produktowej; jeśli priorytetem są metadane albumów, przygotować osobny mały PoC dla artysty z `resource_meta_data`/kolejki Sonosa.
 - Czego nie robić: nie zaczynać pełnej integracji z Sonosem przed PoC z Milestone 1; nie dodawać zależności frontendowych bez potrzeby.
 
 ## Ostatnie aktualizacje
@@ -217,3 +218,4 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-23: Zaimplementowano Milestone 8 lokalnie: neutralny badge jakości audio `Jakosc niedostepna`, nietechniczne komunikaty błędów z technicznymi szczegółami w logach, wspólny moduł logowania i ciemne dopracowanie UI MVP; walidacje automatyczne i Browser smoke przeszły, milestone wymaga self-review.
 - 2026-05-23: Po self-review Milestone 8 poprawiono diagnostykę, aby UI nie pokazywał surowego wyjątku połączenia, oraz wykonano rozszerzony Browser smoke pełniejszego przepływu MVP; milestone wymaga ponownego self-review.
 - 2026-05-23: Self-review Milestone 8 po poprawkach zakończył się bez problemów krytycznych; dokumentacja operacyjna została przygotowana do commita i pusha.
+- 2026-05-23: Sfinalizowano Milestone 8 commitem `91b954c` i pushem gałęzi `codex/milestone-8` do `origin`; wrap-up potwierdził czysty working tree.
