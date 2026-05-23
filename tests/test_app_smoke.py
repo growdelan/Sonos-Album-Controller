@@ -193,8 +193,20 @@ class AppSmokeTest(unittest.TestCase):
         self.assertIn("Sonos Album Controller", response.text)
         self.assertIn("Odswiez albumy", response.text)
         self.assertIn("play-pause-control-button", response.text)
-        self.assertIn("audio-quality-badge", response.text)
+        self.assertIn("player-context", response.text)
         self.assertIn("/static/app.js", response.text)
+
+    def test_frontend_static_contract_for_premium_album_detail(self) -> None:
+        static_dir = PROJECT_ROOT / "src" / "sonos_album_controller" / "static"
+        html = (static_dir / "index.html").read_text(encoding="utf-8")
+        script = (static_dir / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('id="play-album-button"', html)
+        self.assertIn('playAlbumButton.hidden = false;', script)
+        self.assertIn("playAlbumButton.onclick = () => startAlbum(album.id);", script)
+        self.assertIn('window.matchMedia("(prefers-reduced-motion: reduce)")', script)
+        self.assertIn("setMarqueeText(target, message)", script)
+        self.assertNotIn("audio-quality-badge", html)
 
 
 if __name__ == "__main__":

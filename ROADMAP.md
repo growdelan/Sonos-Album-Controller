@@ -420,3 +420,63 @@ Kontrakt sprintu:
 
 Uwagi:
 - milestone zakończony po poprawkach self-review; zgodnie z PoC jakość audio jest prezentowana jako neutralny fallback `Jakość niedostępna`, bez zgadywania Dolby Atmos/lossless
+
+---
+
+## Milestone 9: Premium music-first frontend (done)
+
+Cel:
+- przebudować obecny frontend w kierunku premium music-first UI zgodnie z `prd/001-premium-music-ui.md`
+- sprawić, aby albumy, okładki, aktualny utwór i player dominowały nad diagnostyką oraz statusem technicznym
+- poprawić responsywność desktop/tablet/mobile i dostępność podstawowych akcji bez zmiany backendu, endpointów ani zależności
+
+Definition of Done:
+- header jest kompaktowy, a statusy backendu i Sonosa są małymi wskaźnikami zamiast dużych kart technicznych
+- ekran albumów ma dużą siatkę okładek: 4-5 kolumn desktop, 3 tablet, 2 mobile, z tytułem do dwóch linii i subtelnym hoverem
+- stały dolny player bar jest widoczny, nie zasłania treści i zawiera miniaturę, aktualny utwór, play/pause, previous, next, pętlę, głośność oraz wartość procentową
+- widok albumu ma premium układ z dużą okładką, wyraźnym tytułem, metadanymi, przyciskiem `Odtwórz album`, przyciskiem `Wróć` i nietabelaryczną tracklistą
+- pierwszy utwór nie wygląda jak aktywny tylko dlatego, że jest pierwszy; aktywność wynika wyłącznie ze stanu odtwarzania
+- przycisk pętli pokazuje trzy stany: brak pętli, pętla albumu/listy i pętla jednego utworu z małą cyfrą `1`
+- slider głośności jest jedyną kontrolą liczbową głośności, ma dopracowany styl i pokazuje wartość procentową
+- stany loading, empty, error, cache warning i `Nic nie odtwarza` są dopracowane wizualnie
+- UI ma design tokens w `:root`, systemowy font stack, ciepły złoto-bursztynowy akcent i nie używa fioletowego startupowego stylu
+- CSS jest uporządkowany w sekcje wskazane w PRD 001
+- akcje używają prawdziwych `<button>`, przyciski symboliczne mają `aria-label`, focus jest widoczny, a informacje nie zależą wyłącznie od koloru
+- nie dodano frameworków, bundlera, bibliotek CSS, zewnętrznych ikon, zewnętrznych fontów, bibliotek animacji, zależności npm ani nowych zależności backendowych
+- istniejące endpointy API, kontrakty odpowiedzi, logika Sonos/SoCo, cache i sposób uruchamiania pozostają bez zmian
+
+Zakres:
+- statyczny frontend HTML/CSS/vanilla JavaScript
+- layout aplikacji, header, siatka albumów, widok szczegółów albumu, tracklista i player bar
+- wizualne stany przycisków, pętli, głośności, błędów, cache, loading i empty
+- responsywność desktop/tablet/mobile
+- dostępność podstawowych elementów interaktywnych
+- walidacja Browser smoke z fake backendem lub kontrolowanymi danymi bez realnego Sonosa
+
+Poza zakresem:
+- zmiany backendu i endpointów API
+- zmiana logiki odtwarzania, pętli, cache, diagnostyki albo integracji SoCo
+- nowe źródła albumów
+- pobieranie albo zapisywanie okładek lokalnie
+- wyszukiwanie albumów, jeśli wymaga zmian backendu albo istotnej nowej logiki
+- frameworki frontendowe, bundler, npm, zewnętrzne fonty, zewnętrzne ikony i biblioteki animacji
+- konteneryzacja, zdalny dostęp, logowanie użytkowników i obsługa wielu głośników
+
+Walidacja:
+- `uv run python -m unittest discover -s tests -p "test_*.py"`
+- `node --check src/sonos_album_controller/static/app.js`
+- `git diff --check`
+- Browser smoke na desktopowym viewportcie: start aplikacji, lista albumów, odświeżenie, wejście w album, start odtwarzania, pętla, głośność, mute i diagnostyka
+- Browser smoke na mobilnym viewportcie: siatka albumów w 2 kolumnach, widok albumu w jednej kolumnie, player bez zasłaniania treści i brak poziomego overflow
+- ręczna albo Browser kontrola reduced motion, focus-visible, kolejności tabulacji i `aria-label` dla przycisków symbolicznych
+- kontrola, że `pyproject.toml`, `uv.lock` i repo nie dostały nowych zależności frontendowych ani plików npm
+
+Kontrakt sprintu:
+- wymagany przed implementacją: tak
+- najważniejsze walidacje: Browser smoke desktop/mobile, testy automatyczne, składnia JS, kontrola braku nowych zależności
+- stop conditions: konieczność zmiany backendu/API do spełnienia wymagań PRD, brak możliwości utrzymania playera bez zasłaniania treści na mobile albo konflikt z istniejącą logiką odtwarzania
+
+Uwagi:
+- milestone wynika z `prd/001-premium-music-ui.md`
+- zakres ocenia się jako średni: zmiana jest rozległa wizualnie, ale ograniczona do istniejącego statycznego frontendu i bez zmian backendu
+- milestone zakończony po poprawkach self-review i dodatkowej korekcie wizualnej playera; frontend nie pokazuje już badge jakości audio, a długi tytuł/kontekst odtwarzania przewija się w dolnym playerze

@@ -22,29 +22,54 @@ async function loadStatus() {
 
         const status = await response.json();
         message.textContent = status.message;
-        backendStatus.textContent = status.status;
-        sonosStatus.textContent = status.sonos_integration;
+        setStatusPill(backendStatus, status.status);
+        setStatusPill(sonosStatus, status.sonos_integration);
     } catch (error) {
         message.textContent = "Nie udalo sie pobrac statusu aplikacji.";
-        backendStatus.textContent = "error";
-        sonosStatus.textContent = "unknown";
+        setStatusPill(backendStatus, "error");
+        setStatusPill(sonosStatus, "unknown");
     }
+}
+
+function setStatusPill(target, value) {
+    const normalized = value || "-";
+    target.replaceChildren();
+    const dot = document.createElement("span");
+    dot.className = "status-dot";
+    dot.setAttribute("aria-hidden", "true");
+    target.append(dot, document.createTextNode(normalized));
+    const pill = target.closest(".status-pill");
+    pill.classList.toggle("status-error", ["error", "not_configured", "unknown"].includes(normalized));
+    pill.classList.toggle("status-muted", normalized === "-");
 }
 
 function showAlbumsView() {
     document.querySelector("#album-detail-panel").hidden = true;
     document.querySelector("#albums-panel").hidden = false;
+    scrollToTop();
 }
 
 function showAlbumDetailView() {
     document.querySelector("#albums-panel").hidden = true;
     document.querySelector("#album-detail-panel").hidden = false;
+    scrollToTop();
+}
+
+function scrollToTop() {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
 }
 
 function resetPreparedVolumeControls() {
     const muteButton = document.querySelector("#mute-control-button");
     muteButton.setAttribute("aria-pressed", "false");
     muteButton.textContent = "Mute";
+}
+
+function setPanelMessage(target, message, state = "default") {
+    target.textContent = message;
+    target.classList.toggle("message-error", state === "error");
+    target.classList.toggle("message-warning", state === "warning");
 }
 
 function setPlaybackButtonsEnabled(enabled) {
@@ -55,19 +80,39 @@ function setPlaybackButtonsEnabled(enabled) {
 }
 
 function updatePlayPauseButton() {
-    document.querySelector("#play-pause-control-button").textContent = playerState.isPlaying ? "Pause" : "Play";
+    const button = document.querySelector("#play-pause-control-button");
+    button.textContent = playerState.isPlaying ? "Pause" : "Play";
+    button.setAttribute("aria-label", playerState.isPlaying ? "Pauza" : "Play");
+}
+
+function setMarqueeText(target, message) {
+    target.classList.remove("is-marquee");
+    target.replaceChildren();
+    const text = document.createElement("span");
+    text.className = "player-marquee-text";
+    text.textContent = message;
+    target.appendChild(text);
+    window.requestAnimationFrame(() => {
+        const overflow = text.scrollWidth > target.clientWidth;
+        target.classList.toggle("is-marquee", overflow);
+        if (overflow) {
+            const distance = text.scrollWidth - target.clientWidth + 36;
+            const duration = Math.max(9, Math.min(22, distance / 24));
+            target.style.setProperty("--marquee-distance", `${distance}px`);
+            target.style.setProperty("--marquee-duration", `${duration}s`);
+        } else {
+            target.style.removeProperty("--marquee-distance");
+            target.style.removeProperty("--marquee-duration");
+        }
+    });
 }
 
 function setPlayerMessage(message) {
-    document.querySelector("#player-state").textContent = message;
-}
-
-function setAudioQualityBadge(audioQuality) {
-    const badge = document.querySelector("#audio-quality-badge");
-    const quality = typeof audioQuality === "string" ? audioQuality.trim() : "";
-    badge.textContent = quality || "Jakosc niedostepna";
-    badge.classList.toggle("audio-quality-unavailable", !quality);
-    badge.classList.toggle("audio-quality-available", Boolean(quality));
+    const target = document.querySelector("#player-state");
+    setMarqueeText(target, message);
+    target.classList.remove("player-updated");
+    void target.offsetWidth;
+    target.classList.add("player-updated");
 }
 
 function parseDurationSeconds(duration) {
@@ -115,6 +160,23 @@ function updateProgressDisplay(elapsedOverride = null) {
     const progressValue = duration > 0 ? Math.min(100, (Math.min(elapsed, duration) / duration) * 100) : 0;
     progress.value = progressValue;
     progress.setAttribute("value", String(progressValue));
+}
+
+function updatePlayerArtwork(album) {
+    const cover = document.querySelector("#player-cover");
+    renderCover(cover, album || {}, "Album");
+}
+
+function updatePlayerContext(track = null) {
+    const context = document.querySelector("#player-context");
+    const album = playerState.album;
+    if (track && album) {
+        setMarqueeText(context, album.artist
+            ? `${album.title} / ${album.artist}`
+            : album.title);
+        return;
+    }
+    setMarqueeText(context, album ? album.title : "Wybierz album lub ustaw glosnosc.");
 }
 
 function stopProgressTimer() {
@@ -182,7 +244,13 @@ function updateRepeatButton() {
     repeatButton.classList.remove("repeat-mode-none", "repeat-mode-album", "repeat-mode-track");
     repeatButton.classList.add(`repeat-mode-${playerState.repeatMode}`);
     repeatButton.setAttribute("aria-pressed", playerState.repeatMode === "none" ? "false" : "true");
-    repeatButton.textContent = {
+    repeatButton.textContent = "↻";
+    repeatButton.setAttribute("aria-label", {
+        none: "Petla wylaczona",
+        album: "Petla albumu",
+        track: "Petla jednego utworu",
+    }[playerState.repeatMode]);
+    repeatButton.title = {
         none: "Petla",
         album: "Petla albumu",
         track: "Petla 1",
@@ -218,6 +286,8 @@ function setCurrentTrack(trackIndex, isPlaying, elapsedSeconds = 0) {
     setPlaybackButtonsEnabled(true);
     updatePlayPauseButton();
     setPlayerMessage(`${isPlaying ? "Odtwarzanie" : "Pauza"}: ${track.title}`);
+    updatePlayerArtwork(playerState.album);
+    updatePlayerContext(track);
     updateActiveTrack();
     startProgressTimer();
 }
@@ -231,6 +301,8 @@ function setWholeAlbumPlayback(album, trackIndex, isPlaying) {
     setPlaybackButtonsEnabled(true);
     updatePlayPauseButton();
     setPlayerMessage(`${isPlaying ? "Odtwarzanie" : "Pauza"}: ${album.title}`);
+    updatePlayerArtwork(album);
+    updatePlayerContext();
     updateActiveTrack();
     startProgressTimer();
 }
@@ -256,7 +328,8 @@ function resetPlayerState() {
     updatePlayPauseButton();
     updateRepeatButton();
     setPlayerMessage("Nic nie odtwarza");
-    setAudioQualityBadge(null);
+    updatePlayerArtwork(playerState.album);
+    updatePlayerContext();
     updateActiveTrack();
     updateProgressDisplay(0);
 }
@@ -278,18 +351,23 @@ function renderAlbums(report) {
     const grid = document.querySelector("#albums-grid");
     const message = document.querySelector("#albums-message");
     const count = document.querySelector("#albums-count");
+    const lastRefresh = document.querySelector("#last-refresh-label");
     const albums = Array.isArray(report.albums) ? report.albums : [];
 
     grid.replaceChildren();
+    grid.classList.remove("is-loading");
     count.textContent = `${albums.length} albumow`;
+    lastRefresh.textContent = report.last_refresh
+        ? `Ostatnie odswiezenie: ${report.last_refresh}`
+        : "Ostatnie odswiezenie: -";
 
     if (report.status === "not_configured") {
-        message.textContent = report.message || "Skonfiguruj IP glosnika, aby pobrac albumy.";
+        setPanelMessage(message, report.message || "Skonfiguruj IP glosnika, aby pobrac albumy.", "warning");
         return;
     }
 
     if (report.status === "error") {
-        message.textContent = report.message || "Nie udalo sie pobrac albumow.";
+        setPanelMessage(message, report.message || "Nie udalo sie pobrac albumow.", "error");
         return;
     }
 
@@ -297,30 +375,36 @@ function renderAlbums(report) {
         const cacheMessage = report.last_refresh
             ? `${report.message || "Pokazuje dane z cache."} Ostatnie dane: ${report.last_refresh}.`
             : report.message || "Pokazuje dane z cache.";
-        message.textContent = albums.length === 0
+        setPanelMessage(message, albums.length === 0
             ? `${cacheMessage} Cache nie zawiera albumow.`
-            : cacheMessage;
+            : cacheMessage, "warning");
         if (albums.length === 0) {
             return;
         }
     } else {
         if (albums.length === 0) {
-            message.textContent = "Brak albumow w Sonos Favorites.";
+            setPanelMessage(message, "Brak albumow do wyswietlenia.", "warning");
             return;
         }
-        message.textContent = report.last_refresh
+        setPanelMessage(message, report.last_refresh
             ? `Ostatnie odswiezenie: ${report.last_refresh}.`
-            : "";
+            : "");
     }
-    albums.forEach((album) => {
+    albums.forEach((album, index) => {
         const card = document.createElement("button");
         card.type = "button";
         card.className = "album-card";
+        card.style.animationDelay = `${Math.min(index, 8) * 28}ms`;
         card.addEventListener("click", () => loadAlbumDetail(album.id));
 
         const cover = document.createElement("div");
         cover.className = "album-cover";
         renderCover(cover, album);
+        const playAffordance = document.createElement("span");
+        playAffordance.className = "album-play-affordance";
+        playAffordance.textContent = "▶";
+        playAffordance.setAttribute("aria-hidden", "true");
+        cover.appendChild(playAffordance);
 
         const title = document.createElement("h3");
         title.textContent = album.title;
@@ -381,7 +465,7 @@ function renderAlbumDetail(report) {
         document.querySelector("#album-detail-artist").textContent = "Wykonawca nieznany";
         cover.replaceChildren();
         cover.textContent = "Album";
-        message.textContent = report.message || "Nie znaleziono albumu.";
+        setPanelMessage(message, report.message || "Nie znaleziono albumu.", "error");
         playAlbumButton.hidden = true;
         playAlbumButton.onclick = null;
         playerState.album = null;
@@ -397,12 +481,16 @@ function renderAlbumDetail(report) {
     document.querySelector("#album-detail-title").textContent = album.title;
     document.querySelector("#album-detail-artist").textContent = album.artist || "Wykonawca nieznany";
     renderCover(cover, album);
+    document.querySelector("#album-detail-panel").style.setProperty(
+        "--album-glow",
+        album.album_art_uri ? "rgba(228, 184, 79, 0.2)" : "rgba(154, 219, 189, 0.12)",
+    );
     renderTracks(tracks, album.id);
-    message.textContent = report.status === "ok"
+    setPanelMessage(message, report.status === "ok"
         ? ""
-        : report.message || "Nie udalo sie pobrac listy utworow.";
-    playAlbumButton.hidden = tracks.length > 0;
-    playAlbumButton.onclick = tracks.length > 0 ? null : () => startAlbum(album.id);
+        : report.message || "Nie udalo sie pobrac listy utworow.", report.status === "ok" ? "default" : "warning");
+    playAlbumButton.hidden = false;
+    playAlbumButton.onclick = () => startAlbum(album.id);
     resetPlayerState();
     resetPreparedVolumeControls();
     showAlbumDetailView();
@@ -431,7 +519,6 @@ async function startTrack(albumId, trackIndex) {
     try {
         const report = await postJson("/api/playback/start", { album_id: albumId, track_index: trackIndex });
         applyReportTracks(report);
-        setAudioQualityBadge(report.state ? report.state.audio_quality : null);
         if (report.state && report.state.track) {
             const nextIndex = Number.isInteger(report.state.track_index) ? report.state.track_index : trackIndex;
             setCurrentTrack(nextIndex, report.state.is_playing);
@@ -450,7 +537,6 @@ async function startAlbum(albumId) {
     try {
         const report = await postJson("/api/playback/start", { album_id: albumId, track_index: 0 });
         applyReportTracks(report);
-        setAudioQualityBadge(report.state ? report.state.audio_quality : null);
         if (report.state && report.state.track) {
             const nextIndex = Number.isInteger(report.state.track_index) ? report.state.track_index : 0;
             setCurrentTrack(nextIndex, report.state.is_playing);
@@ -554,7 +640,7 @@ async function playPreviousTrack() {
 
 async function loadAlbumDetail(albumId) {
     const message = document.querySelector("#album-detail-message");
-    message.textContent = "Ladowanie albumu...";
+    setPanelMessage(message, "Ladowanie albumu...");
     showAlbumDetailView();
 
     try {
@@ -577,8 +663,10 @@ async function loadAlbumDetail(albumId) {
 async function loadAlbums(refresh = false) {
     const message = document.querySelector("#albums-message");
     const count = document.querySelector("#albums-count");
-    message.textContent = "Ladowanie albumow...";
+    const grid = document.querySelector("#albums-grid");
+    setPanelMessage(message, "Ladowanie biblioteki...");
     count.textContent = "-";
+    renderAlbumSkeletons();
 
     try {
         const response = await fetch(refresh ? "/api/albums/refresh" : "/api/albums", {
@@ -590,13 +678,34 @@ async function loadAlbums(refresh = false) {
 
         renderAlbums(await response.json());
     } catch (error) {
-        document.querySelector("#albums-grid").replaceChildren();
-        message.textContent = "Nie udalo sie pobrac albumow.";
+        grid.replaceChildren();
+        grid.classList.remove("is-loading");
+        setPanelMessage(message, "Nie udalo sie pobrac albumow.", "error");
         count.textContent = "0 albumow";
     }
 }
 
+function renderAlbumSkeletons() {
+    const grid = document.querySelector("#albums-grid");
+    grid.replaceChildren();
+    grid.classList.add("is-loading");
+    for (let index = 0; index < 10; index += 1) {
+        const card = document.createElement("div");
+        card.className = "skeleton-card";
+        card.style.animationDelay = `${index * 24}ms`;
+        const cover = document.createElement("div");
+        cover.className = "skeleton-cover";
+        const title = document.createElement("div");
+        title.className = "skeleton-line";
+        const artist = document.createElement("div");
+        artist.className = "skeleton-line short";
+        card.append(cover, title, artist);
+        grid.appendChild(card);
+    }
+}
+
 function renderDiagnostics(diagnostics) {
+    showDiagnosticsPanel(true);
     document.querySelector("#diagnostics-ip").textContent = diagnostics.configured_ip || "Nie skonfigurowano";
     document.querySelector("#diagnostics-connection").textContent = diagnostics.connection_status;
     document.querySelector("#diagnostics-cache").textContent = diagnostics.cache.available
@@ -606,6 +715,7 @@ function renderDiagnostics(diagnostics) {
 }
 
 async function loadDiagnostics() {
+    showDiagnosticsPanel(true);
     const errorTarget = document.querySelector("#diagnostics-error");
     try {
         const response = await fetch("/api/diagnostics");
@@ -620,6 +730,7 @@ async function loadDiagnostics() {
 }
 
 async function testConnection() {
+    showDiagnosticsPanel(true);
     const connectionTarget = document.querySelector("#diagnostics-connection");
     const errorTarget = document.querySelector("#diagnostics-error");
     connectionTarget.textContent = "testowanie";
@@ -638,6 +749,13 @@ async function testConnection() {
     }
 }
 
+function showDiagnosticsPanel(show) {
+    const panel = document.querySelector("#diagnostics-panel");
+    const button = document.querySelector("#diagnostics-button");
+    panel.hidden = !show;
+    button.setAttribute("aria-expanded", String(show));
+}
+
 function togglePreparedMuteControl() {
     const muteButton = document.querySelector("#mute-control-button");
     const nextPressed = muteButton.getAttribute("aria-pressed") !== "true";
@@ -653,6 +771,7 @@ function togglePreparedMuteControl() {
 
 function updateVolume() {
     const volume = Number(document.querySelector("#volume-control").value);
+    document.querySelector("#volume-value").textContent = `${volume}%`;
     postJson("/api/playback/volume", { volume })
         .catch((error) => {
             setPlayerMessage(error.message || "Nie udalo sie ustawic glosnosci.");
@@ -677,7 +796,13 @@ async function toggleRepeatMode() {
 }
 
 document.querySelector("#refresh-albums-button").addEventListener("click", () => loadAlbums(true));
-document.querySelector("#diagnostics-button").addEventListener("click", loadDiagnostics);
+document.querySelector("#diagnostics-button").addEventListener("click", () => {
+    if (document.querySelector("#diagnostics-panel").hidden) {
+        loadDiagnostics();
+    } else {
+        showDiagnosticsPanel(false);
+    }
+});
 document.querySelector("#connection-test-button").addEventListener("click", testConnection);
 document.querySelector("#back-to-albums-button").addEventListener("click", showAlbumsView);
 document.querySelector("#previous-control-button").addEventListener("click", playPreviousTrack);
@@ -685,10 +810,13 @@ document.querySelector("#play-pause-control-button").addEventListener("click", t
 document.querySelector("#next-control-button").addEventListener("click", playNextTrack);
 document.querySelector("#repeat-control-button").addEventListener("click", toggleRepeatMode);
 document.querySelector("#mute-control-button").addEventListener("click", togglePreparedMuteControl);
+document.querySelector("#volume-control").addEventListener("input", () => {
+    const volume = Number(document.querySelector("#volume-control").value);
+    document.querySelector("#volume-value").textContent = `${volume}%`;
+});
 document.querySelector("#volume-control").addEventListener("change", updateVolume);
 
 updateRepeatButton();
 updateProgressDisplay(0);
 loadStatus();
 loadAlbums();
-loadDiagnostics();

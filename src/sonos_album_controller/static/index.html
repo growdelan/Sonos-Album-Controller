@@ -8,43 +8,57 @@
 </head>
 <body>
     <main class="shell">
-        <section class="status-panel" aria-labelledby="app-title">
-            <p class="eyebrow">Lokalny kontroler Sonos Era 300</p>
-            <h1 id="app-title">Sonos Album Controller</h1>
-            <p id="status-message" class="status-message">Ladowanie statusu aplikacji...</p>
-            <dl class="status-grid">
-                <div>
-                    <dt>Backend</dt>
-                    <dd id="backend-status">-</dd>
-                </div>
-                <div>
-                    <dt>Integracja Sonos</dt>
-                    <dd id="sonos-status">-</dd>
-                </div>
-            </dl>
-            <div class="actions">
-                <button id="refresh-albums-button" type="button">Odswiez albumy</button>
-                <button id="diagnostics-button" type="button">Diagnostyka</button>
-                <button id="connection-test-button" type="button">Testuj polaczenie z Sonos</button>
+        <header class="app-header" aria-labelledby="app-title">
+            <div class="brand-block">
+                <p class="eyebrow">Lokalny kontroler Sonos Era 300</p>
+                <h1 id="app-title">Sonos Album Controller</h1>
+                <p id="status-message" class="status-message">Ladowanie statusu aplikacji...</p>
             </div>
-            <section id="albums-panel" class="albums-panel" aria-labelledby="albums-title">
-                <div class="section-heading">
-                    <h2 id="albums-title">Albumy</h2>
+            <div class="header-meta" aria-label="Status aplikacji">
+                <dl class="status-pills">
+                    <div class="status-pill">
+                        <dt>Backend</dt>
+                        <dd id="backend-status"><span class="status-dot" aria-hidden="true"></span>-</dd>
+                    </div>
+                    <div class="status-pill">
+                        <dt>Sonos</dt>
+                        <dd id="sonos-status"><span class="status-dot" aria-hidden="true"></span>-</dd>
+                    </div>
+                </dl>
+                <p id="last-refresh-label" class="last-refresh-label">Ostatnie odswiezenie: -</p>
+                <div class="actions" aria-label="Akcje aplikacji">
+                    <button id="refresh-albums-button" class="secondary-button" type="button">Odswiez albumy</button>
+                    <button id="diagnostics-button" class="ghost-button" type="button" aria-controls="diagnostics-panel" aria-expanded="false">Diagnostyka</button>
+                    <button id="connection-test-button" class="ghost-button" type="button">Test polaczenia</button>
+                </div>
+            </div>
+        </header>
+
+        <section class="content-surface" aria-label="Biblioteka muzyczna">
+            <section id="albums-panel" class="albums-panel view-panel" aria-labelledby="albums-title">
+                <div class="section-heading library-heading">
+                    <div>
+                        <p class="eyebrow">Biblioteka</p>
+                        <h2 id="albums-title">Albumy</h2>
+                    </div>
                     <p id="albums-count">-</p>
                 </div>
                 <p id="albums-message" class="panel-message">Ladowanie albumow...</p>
                 <div id="albums-grid" class="albums-grid" aria-live="polite"></div>
             </section>
-            <section id="album-detail-panel" class="album-detail-panel" aria-labelledby="album-detail-title" hidden>
-                <button id="back-to-albums-button" class="secondary-button" type="button">Powrot do albumow</button>
+
+            <section id="album-detail-panel" class="album-detail-panel view-panel" aria-labelledby="album-detail-title" hidden>
                 <div class="album-detail-layout">
                     <div id="album-detail-cover" class="album-detail-cover">Album</div>
-                    <div>
+                    <div class="album-detail-copy">
                         <p class="eyebrow">Album</p>
                         <h2 id="album-detail-title">-</h2>
                         <p id="album-detail-artist" class="album-detail-artist">-</p>
                         <p id="album-detail-message" class="panel-message"></p>
-                        <button id="play-album-button" class="play-album-button" type="button" hidden>Odtworz album</button>
+                        <div class="album-detail-actions">
+                            <button id="play-album-button" class="primary-button play-album-button" type="button" hidden>Odtworz album</button>
+                            <button id="back-to-albums-button" class="secondary-button" type="button">Wroc</button>
+                        </div>
                     </div>
                 </div>
                 <section class="tracks-panel" aria-labelledby="tracks-title">
@@ -54,29 +68,9 @@
                     </div>
                     <ol id="tracks-list" class="tracks-list" aria-live="polite"></ol>
                 </section>
-                <section class="player-panel" aria-labelledby="player-title">
-                    <h3 id="player-title">Player</h3>
-                    <p id="player-state" class="player-state">Nic nie odtwarza</p>
-                    <p id="audio-quality-badge" class="audio-quality-badge audio-quality-unavailable">Jakosc niedostepna</p>
-                    <div class="player-controls">
-                        <button id="previous-control-button" type="button" disabled>Poprzedni</button>
-                        <button id="play-pause-control-button" type="button" disabled>Play</button>
-                        <button id="next-control-button" type="button" disabled>Nastepny</button>
-                        <button id="repeat-control-button" class="repeat-mode-none" type="button" disabled aria-label="Tryb petli" aria-pressed="false">Petla</button>
-                    </div>
-                    <div class="progress-panel" aria-label="Postep utworu">
-                        <span id="progress-current-time">0:00</span>
-                        <progress id="track-progress" value="0" max="100"></progress>
-                        <span id="progress-duration">0:00</span>
-                    </div>
-                    <div class="volume-controls">
-                        <label for="volume-control">Glosnosc</label>
-                        <input id="volume-control" type="range" min="0" max="100" value="30">
-                        <button id="mute-control-button" type="button" aria-pressed="false">Mute</button>
-                    </div>
-                </section>
             </section>
-            <section class="diagnostics-panel" aria-labelledby="diagnostics-title">
+
+            <section id="diagnostics-panel" class="diagnostics-panel view-panel" aria-labelledby="diagnostics-title" hidden>
                 <h2 id="diagnostics-title">Diagnostyka</h2>
                 <dl class="diagnostics-grid">
                     <div>
@@ -99,6 +93,34 @@
             </section>
         </section>
     </main>
+
+    <section class="player-panel" aria-labelledby="player-title">
+        <div id="player-cover" class="player-cover" aria-hidden="true">Album</div>
+        <div class="player-now-playing">
+            <h2 id="player-title">Player</h2>
+            <p id="player-state" class="player-state">Nic nie odtwarza</p>
+            <p id="player-context" class="player-context">Wybierz album lub ustaw glosnosc.</p>
+        </div>
+        <div class="player-main-controls">
+            <div class="player-controls">
+                <button id="previous-control-button" class="icon-button" type="button" disabled aria-label="Poprzedni utwor">‹</button>
+                <button id="play-pause-control-button" class="play-control-button" type="button" disabled aria-label="Play">Play</button>
+                <button id="next-control-button" class="icon-button" type="button" disabled aria-label="Nastepny utwor">›</button>
+                <button id="repeat-control-button" class="icon-button repeat-mode-none" type="button" disabled aria-label="Tryb petli" aria-pressed="false">↻</button>
+            </div>
+            <div class="progress-panel" aria-label="Postep utworu">
+                <span id="progress-current-time">0:00</span>
+                <progress id="track-progress" value="0" max="100"></progress>
+                <span id="progress-duration">0:00</span>
+            </div>
+        </div>
+        <div class="volume-controls">
+            <label for="volume-control">Glosnosc</label>
+            <input id="volume-control" type="range" min="0" max="100" value="30">
+            <span id="volume-value" class="volume-value">30%</span>
+            <button id="mute-control-button" class="ghost-button" type="button" aria-pressed="false">Mute</button>
+        </div>
+    </section>
     <script src="/static/app.js"></script>
 </body>
 </html>
