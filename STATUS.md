@@ -12,7 +12,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 ## Aktualny milestone / batch
 
 - Aktualny milestone: Milestone 9: Premium music-first frontend
-- Status: zakończony po pozytywnym self-review; finalizacja obejmuje commit i push gałęzi `codex/nowy-front`
+- Status: zakończony po pozytywnym self-review, sfinalizowany commitami na gałęzi `codex/nowy-front` i wypchnięty do `origin`
 - Kontrakt sprintu: utworzony przed implementacją w odpowiedzi agenta; profil `openai_patch`, format patch/diff przez `apply_patch`
 - Zakres poza bieżącą pracą: nowe funkcje poza PRD, zdalny dostęp, logowanie użytkowników, obsługa wielu głośników, konteneryzacja, zgadywanie jakości audio bez danych
 
@@ -56,7 +56,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Co jest w trakcie
 
-- Brak aktywnej implementacji; Milestone 9 jest zakończony i finalizowany operacyjnie na gałęzi `codex/nowy-front`.
+- Brak aktywnej implementacji; Milestone 9 jest zakończony, zapisany w repo i wypchnięty na `origin/codex/nowy-front`.
 
 ## Co jest następne
 
@@ -114,6 +114,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 | 2026-05-23 | Poprawki po self-review Milestone 9 | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `git diff --check` | PASS | 60 testów PASS; przycisk `Odtworz album` pozostaje widoczny w widoku albumu i startuje album od początku; dodano statyczny test kontraktu premium album detail i obsługę `prefers-reduced-motion` dla przewijania JS. |
 | 2026-05-23 | Drobne poprawki playera Milestone 9 | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `git diff --check`; `! rg -n "audio-quality-badge\|setAudioQualityBadge\|Jakosc niedostepna" src/sonos_album_controller/static` | PASS | Usunięto widoczny badge jakości z playera i martwe frontendowe odwołania; dodano przewijanie przepełnionych linii tytułu/kontekstu playera. Browser smoke niepowtórzony: narzędzie Browser i lokalny Playwright niedostępne w tej sesji. |
 | 2026-05-23 | Finalizacja Milestone 9 przed commitem | `uv run python -m unittest discover -s tests -p "test_*.py"`; `node --check src/sonos_album_controller/static/app.js`; `git diff --check`; `! rg -n "audio-quality-badge\|setAudioQualityBadge\|Jakosc niedostepna" src/sonos_album_controller/static`; `test ! -f package.json`; `git diff --quiet -- pyproject.toml uv.lock` | PASS | 60 testów PASS; składnia JS poprawna; brak błędów whitespace; brak martwego badge jakości w statycznym froncie; brak npm i brak zmian zależności. |
+| 2026-05-23 | Push Milestone 9 | `git push -u origin codex/nowy-front` | PASS | Gałąź `codex/nowy-front` wypchnięta do `origin`; pierwszy commit finalizacyjny: `19a5be0`. |
 
 ## Review
 
@@ -237,3 +238,4 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-23: Po self-review Milestone 9 przywrócono widoczny główny przycisk `Odtworz album`, dodano regresyjny test statycznego kontraktu album detail i dostosowano przewijanie JS do `prefers-reduced-motion`; milestone wymaga ponownego self-review.
 - 2026-05-23: Po uwadze wizualnej do playera usunięto badge jakości audio z frontendu i dodano marquee dla długiego tytułu oraz kontekstu odtwarzania.
 - 2026-05-23: Self-review Milestone 9 po poprawkach zakończył się bez problemów krytycznych; wykonano finalne walidacje i przygotowano zmianę do commita oraz pusha.
+- 2026-05-23: Sfinalizowano Milestone 9 na gałęzi `codex/nowy-front`, wykonano push do `origin`; commit implementacyjny `19a5be0`.
