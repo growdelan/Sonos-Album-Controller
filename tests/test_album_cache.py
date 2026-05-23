@@ -56,6 +56,23 @@ class FakeMusicLibrary:
         )
 
 
+class MissingArtistMusicLibrary:
+    def __init__(self, speaker: FakeSpeaker) -> None:
+        self.speaker = speaker
+
+    def get_sonos_favorites(self, max_items: int = 100) -> FakeSearchResult:
+        return FakeSearchResult(
+            [
+                FakeFavorite(
+                    title="Cached Later",
+                    uri="x-rincon-cpcontainer:1004206calbum%3A1755345446?sid=204",
+                    item_class="object.container.album.musicAlbum",
+                    album_art_uri="https://example.test/cover.jpg",
+                )
+            ]
+        )
+
+
 class FailingSpeaker:
     def __init__(self, speaker_ip: str) -> None:
         self.speaker_ip = speaker_ip
@@ -113,6 +130,61 @@ class AlbumCacheTest(unittest.TestCase):
         self.assertIsNotNone(cache)
         assert cache is not None
         self.assertEqual(cache.albums[0].title, "Cached Later")
+
+    def test_load_albums_writes_artist_from_lookup_to_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cache_path = Path(temp_dir) / "albums.json"
+            report = load_albums(
+                AppConfig(
+                    sonos_speaker_ip="192.0.2.20",
+                    log_path=Path(temp_dir) / "app.log",
+                    cache_path=cache_path,
+                ),
+                speaker_factory=FakeSpeaker,
+                music_library_factory=MissingArtistMusicLibrary,
+                artist_lookup=lambda album_id: "Dreamcatcher",
+            )
+            cache = read_album_cache(cache_path)
+
+        self.assertEqual(report.status, "ok")
+        self.assertEqual(report.albums[0].artist, "Dreamcatcher")
+        self.assertIsNotNone(cache)
+        assert cache is not None
+        self.assertEqual(cache.albums[0].artist, "Dreamcatcher")
+
+    def test_load_albums_uses_cached_artist_without_lookup(self) -> None:
+        def failing_lookup(album_id: str) -> str | None:
+            raise AssertionError("lookup should not run for cached artist")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cache_path = Path(temp_dir) / "albums.json"
+            write_album_cache(
+                cache_path,
+                [
+                    Album(
+                        id="x-rincon-cpcontainer:1004206calbum%3A1755345446?sid=204",
+                        title="Cached Later",
+                        artist="Cached Artist",
+                        uri="x-rincon-cpcontainer:1004206calbum%3A1755345446?sid=204",
+                        album_art_uri="https://example.test/cover.jpg",
+                        date_added=None,
+                    )
+                ],
+                last_refresh="2026-05-23T12:00:00Z",
+            )
+            report = load_albums(
+                AppConfig(
+                    sonos_speaker_ip="192.0.2.20",
+                    log_path=Path(temp_dir) / "app.log",
+                    cache_path=cache_path,
+                ),
+                speaker_factory=FakeSpeaker,
+                music_library_factory=MissingArtistMusicLibrary,
+                artist_lookup=failing_lookup,
+            )
+
+        self.assertEqual(report.status, "ok")
+        self.assertEqual(report.albums[0].artist, "Cached Artist")
 
     def test_load_albums_returns_fresh_data_when_cache_write_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

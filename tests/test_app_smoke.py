@@ -227,6 +227,8 @@ class AppSmokeTest(unittest.TestCase):
         self.assertIn('indicator.className = "track-playing-indicator";', script)
         self.assertIn('window.matchMedia("(prefers-reduced-motion: reduce)")', script)
         self.assertIn("setMarqueeText(target, message)", script)
+        self.assertIn("setOptionalText", script)
+        self.assertNotIn("Wykonawca nieznany", script)
         styles = (static_dir / "styles.css").read_text(encoding="utf-8")
         self.assertIn(".track-playing-indicator", styles)
         self.assertIn("@keyframes track-equalizer", styles)

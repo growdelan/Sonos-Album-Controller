@@ -180,6 +180,12 @@ function updatePlayerContext(track = null) {
     setMarqueeText(context, album ? album.title : "Wybierz album lub ustaw glosnosc.");
 }
 
+function setOptionalText(target, value) {
+    const text = typeof value === "string" ? value.trim() : "";
+    target.textContent = text;
+    target.hidden = text.length === 0;
+}
+
 function stopProgressTimer() {
     if (playerState.progressTimer !== null) {
         window.clearInterval(playerState.progressTimer);
@@ -438,7 +444,7 @@ function renderAlbums(report) {
         title.textContent = album.title;
 
         const artist = document.createElement("p");
-        artist.textContent = album.artist || "Wykonawca nieznany";
+        setOptionalText(artist, album.artist);
 
         card.append(cover, title, artist);
         grid.appendChild(card);
@@ -497,7 +503,7 @@ function renderAlbumDetail(report) {
 
     if (!album) {
         document.querySelector("#album-detail-title").textContent = "Album niedostepny";
-        document.querySelector("#album-detail-artist").textContent = "Wykonawca nieznany";
+        setOptionalText(document.querySelector("#album-detail-artist"), "");
         cover.replaceChildren();
         cover.textContent = "Album";
         setPanelMessage(message, report.message || "Nie znaleziono albumu.", "error");
@@ -514,7 +520,7 @@ function renderAlbumDetail(report) {
     playerState.album = album;
     playerState.tracks = tracks;
     document.querySelector("#album-detail-title").textContent = album.title;
-    document.querySelector("#album-detail-artist").textContent = album.artist || "Wykonawca nieznany";
+    setOptionalText(document.querySelector("#album-detail-artist"), album.artist);
     renderCover(cover, album);
     document.querySelector("#album-detail-panel").style.setProperty(
         "--album-glow",

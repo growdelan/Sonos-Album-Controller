@@ -1,7 +1,9 @@
 import warnings
 from collections.abc import Iterable
-from dataclasses import asdict, dataclass
-from typing import Any, Callable
+from dataclasses import asdict, dataclass, replace
+from re import search
+from time import monotonic
+from typing import Any, Callable, Mapping
 
 from soco import SoCo
 from soco.music_library import MusicLibrary
@@ -12,6 +14,8 @@ from sonos_album_controller.config import AppConfig, SONOS_SPEAKER_IP_ENV
 
 SpeakerFactory = Callable[[str], Any]
 MusicLibraryFactory = Callable[[Any], Any]
+ArtistLookup = Callable[[str], str | None]
+ARTIST_LOOKUP_BUDGET_SECONDS = 10.0
 
 
 @dataclass(frozen=True)
@@ -103,6 +107,23 @@ def _effective_uri(item: Any) -> str | None:
         _read_value(item, "res"),
         *_resource_values(item, "uri"),
     )
+
+
+def apple_album_id(item: Any) -> str | None:
+    values = [
+        _read_value(item, "resource_meta_data"),
+        _read_value(item, "metadata"),
+        _read_value(item, "meta"),
+        _read_value(item, "desc"),
+        _effective_uri(item),
+        *_resource_values(item, "uri"),
+        *_resource_values(item, "resource_meta_data"),
+        *_resource_values(item, "metadata"),
+        *_resource_values(item, "meta"),
+    ]
+    searchable = " ".join(str(value) for value in values if value is not None)
+    match = search(r"album(?:%3A|:)(\d+)", searchable)
+    return match.group(1) if match else None
 
 
 def _is_album_favorite(item: Any) -> bool:
@@ -211,10 +232,47 @@ def _sort_albums(albums: list[Album]) -> list[Album]:
     return [album for _, album in dated] + [album for _, album in undated]
 
 
+def _album_with_artist(album: Album, artist: str | None) -> Album:
+    normalized = _first_text(artist)
+    return replace(album, artist=normalized) if normalized else album
+
+
+def _enrich_album_artist(
+    album: Album,
+    item: Any,
+    artist_lookup: ArtistLookup | None,
+    known_artists: Mapping[str, str] | None,
+    logger: Any,
+) -> tuple[Album, bool]:
+    if album.artist:
+        return album, False
+
+    if known_artists:
+        cached_artist = _first_text(known_artists.get(album.id))
+        if cached_artist:
+            return _album_with_artist(album, cached_artist), False
+
+    if artist_lookup is None:
+        return album, False
+
+    album_id = apple_album_id(item)
+    if album_id is None:
+        return album, False
+
+    try:
+        return _album_with_artist(album, artist_lookup(album_id)), False
+    except Exception as error:
+        logger.warning("Nie udalo sie wzbogacic artysty albumu %s przez Apple lookup: %s", album.title, error)
+        return album, True
+
+
 def fetch_albums(
     config: AppConfig,
     speaker_factory: SpeakerFactory = SoCo,
     music_library_factory: MusicLibraryFactory = MusicLibrary,
+    artist_lookup: ArtistLookup | None = None,
+    known_artists: Mapping[str, str] | None = None,
+    artist_lookup_budget_seconds: float | None = ARTIST_LOOKUP_BUDGET_SECONDS,
     favorites_limit: int = 100,
 ) -> AlbumsReport:
     logger = get_app_logger(config.log_path)
@@ -264,7 +322,30 @@ def fetch_albums(
             message="Nie udalo sie odswiezyc albumow z Sonosa. Sprawdz polaczenie i sproboj ponownie.",
         )
 
-    albums = _sort_albums(_dedupe_albums([album for item in favorite_items if (album := normalize_album(item))]))
+    albums = []
+    artist_lookup_started_at = monotonic() if artist_lookup and artist_lookup_budget_seconds is not None else None
+    artist_lookup_disabled = False
+    for item in favorite_items:
+        album = normalize_album(item)
+        if album is None:
+            continue
+        lookup_for_album = None if artist_lookup_disabled else artist_lookup
+        if (
+            lookup_for_album
+            and artist_lookup_started_at is not None
+            and artist_lookup_budget_seconds is not None
+            and monotonic() - artist_lookup_started_at >= artist_lookup_budget_seconds
+        ):
+            logger.warning("Pomijam kolejne lookupi Apple artist, bo przekroczono budzet czasu odswiezania.")
+            artist_lookup_disabled = True
+            lookup_for_album = None
+        enriched_album, lookup_failed = _enrich_album_artist(album, item, lookup_for_album, known_artists, logger)
+        if lookup_failed:
+            logger.warning("Pomijam kolejne lookupi Apple artist podczas tego odswiezania.")
+            artist_lookup_disabled = True
+        albums.append(enriched_album)
+
+    albums = _sort_albums(_dedupe_albums(albums))
     return AlbumsReport(status="ok", albums=albums)
 
 
