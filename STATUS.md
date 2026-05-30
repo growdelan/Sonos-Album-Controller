@@ -12,14 +12,14 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 ## Aktualny milestone / batch
 
 - Aktualny milestone: Milestone 12: Okładki albumów w Ostatnio odtwarzanych Sonos
-- Status: zakończony po pozytywnym self-review; przygotowany do commita i pusha na gałęzi `codex/okładki`
+- Status: zakończony po pozytywnym self-review, zapisany commitem `3ba78aa` i wypchnięty do `origin/codex/okładki`
 - Kontrakt sprintu: ustalony przed implementacją; profil `openai_patch`, format patch/diff przez `apply_patch`
 - Zakres poza bieżącą pracą: UI, cache schema, nowe źródła muzyki, lokalne pobieranie okładek, oficjalne Sonos Control API, playlisty/radio/pojedyncze utwory spoza albumów, zmiany tracklisty, pętli, playera i sterowania, nowe zależności
 
 ## Co działa
 
 - Istnieje wypełniona specyfikacja MVP lokalnej aplikacji WWW do sterowania Sonos Era 300.
-- Istnieje roadmapa rozbita na Milestone 0.5 oraz milestone’y 1-8, z walidacjami i stop conditions.
+- Istnieje roadmapa rozbita na Milestone 0.5 oraz milestone’y 1-12, z walidacjami i stop conditions.
 - Minimalna aplikacja FastAPI serwuje statyczny frontend i endpoint `/api/status`.
 - Test smoke HTTP potwierdza odpowiedź endpointu statusu i serwowanie frontendu.
 - Istnieje izolowany PoC SoCo uruchamiany lokalnie z `SONOS_SPEAKER_IP`, z kontrolowanym stanem `not_configured` bez IP.
@@ -62,16 +62,18 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Co jest w trakcie
 
-- Brak aktywnej implementacji; Milestone 12 jest zakończony po pozytywnym self-review i przygotowany do finalizacji.
+- Brak aktywnej implementacji; Milestone 12 jest zakończony, zapisany w repo i wypchnięty do `origin/codex/okładki`.
 
 ## Co jest następne
 
-- Wykonać commit i push Milestone 12; opcjonalnie po finalizacji wykonać ręczny smoke w oficjalnej aplikacji Sonos mobile.
+- Opcjonalnie wykonać ręczny smoke w oficjalnej aplikacji Sonos mobile dla albumu uruchomionego z aplikacji albo rozpocząć kolejny przyrost od nowego PRD/decyzji produktowej.
 
 ## Walidacja
 
 | Data | Zakres | Komenda / sposób | Wynik | Uwagi |
 |---|---|---|---|---|
+| 2026-05-30 | Push Milestone 12 | `git push -u origin HEAD` | PASS | Gałąź `codex/okładki` wypchnięta do `origin`; commit implementacyjny: `3ba78aa`. |
+| 2026-05-30 | Wrap-up po finalizacji Milestone 12 | `git status --short --branch`; `git log -3 --oneline --decorate` | PASS | Gałąź `codex/okładki` śledzi `origin/codex/okładki`; stan dokumentacji operacyjnej doprowadzony do zgodności po pushu. |
 | 2026-05-30 | Milestone 12 implementacja lokalna | `uv run python -m unittest tests.test_playback`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `uv run python -m py_compile src/sonos_album_controller/playback.py`; `git diff --check`; read-only smoke realnych Favorites dla `<ASSEMBLE24>` | PASS | 26 testów playbacku i 75 testów pełnych PASS; helper wzbogacił realne `resource_meta_data` o `albumArtURI` i URL okładki bez uruchamiania odtwarzania. Ręczny smoke w oficjalnej aplikacji Sonos mobile nie został wykonany. |
 | 2026-05-22 | Specyfikacja i roadmapa z PRD | `git diff -- spec.md ROADMAP.md`; `rg -n "^## \|^Cel:\|^Definition of Done:\|^Zakres:\|^Poza zakresem:\|^Walidacja:\|TODO:" spec.md ROADMAP.md` | PASS | Zmiana dokumentacyjna; testów runtime nie uruchamiano, bo nie zmieniano kodu. |
 | 2026-05-22 | Milestone 0.5 smoke test | `uv run python -m unittest discover -s tests -p "test_*.py"` | PASS | 2 testy klienta HTTP bez realnego Sonosa. |
@@ -229,7 +231,7 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, Milestone 5 ma zakończony widok albumu i player bez odtwarzania, Milestone 6 ma zakończony playback z fallbackiem `AddURIToQueue` i odczytem tracklisty z kolejki Sonosa po starcie albumu, Milestone 7 ma zakończone tryby pętli i lokalny pasek postępu po pozytywnym self-review, Milestone 8 ma zakończony neutralny badge jakości audio, nietechniczne błędy/logi i ciemne polerowanie UI MVP po pozytywnym self-review, Milestone 9 ma zakończony premium music-first frontend, Milestone 10 ma zakończony wybór widocznej piosenki z tracklisty i wskaźnik grania aktywnego utworu, Milestone 11 ma zakończone wzbogacanie artystów albumów przez Apple/iTunes lookup, a Milestone 12 ma zakończone wzbogacanie metadata `AddURIToQueue` o `albumArtURI`.
 - Decyzje, których nie wolno zgubić: FastAPI + SoCo, statyczny frontend HTML/CSS/vanilla JS, jeden Sonos Era 300 po stałym IP z `SONOS_SPEAKER_IP`, cache albumów w `~/.sonos-album-controller/cache/albums.json` albo `SONOS_CACHE_PATH`, jakość audio best effort, testy automatyczne bez realnego Sonosa.
 - Pliki, które warto doczytać jako pierwsze: `AGENTS.md`, `STATUS.md`, `spec.md`, `ROADMAP.md`, `src/sonos_album_controller/app_logging.py`, `src/sonos_album_controller/playback.py`, `src/sonos_album_controller/albums.py`, `src/sonos_album_controller/static/app.js`, `src/sonos_album_controller/static/styles.css`, `tests/test_playback.py`, `tests/test_app_smoke.py`.
-- Następny bezpieczny krok: commit i push Milestone 12, potem opcjonalny ręczny smoke w aplikacji Sonos mobile albo kolejny przyrost od nowego PRD.
+- Następny bezpieczny krok: opcjonalny ręczny smoke w aplikacji Sonos mobile albo kolejny przyrost od nowego PRD/decyzji produktowej.
 - Czego nie robić: nie zaczynać pełnej integracji z Sonosem przed PoC z Milestone 1; nie dodawać zależności frontendowych bez potrzeby.
 
 ## Ostatnie aktualizacje
@@ -283,3 +285,4 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-23: Ponowny self-review Milestone 11 zakończył się bez problemów krytycznych; dokumentacja operacyjna została przygotowana do commita i pusha.
 - 2026-05-23: Sfinalizowano Milestone 11 commitem `c982ff4` i pushem gałęzi `codex/artysta` do `origin`; wrap-up potwierdził spójny handoff.
 - 2026-05-30: Dodano `prd/004-okladki-w-ostatnio-odtworzonych.md`, rozszerzono `spec.md` i `ROADMAP.md` o Milestone 12 oraz zaimplementowano wzbogacanie `EnqueuedURIMetaData` o `albumArtURI`; testy automatyczne, read-only smoke realnych Favorites i self-review przeszły bez problemów krytycznych.
+- 2026-05-30: Sfinalizowano Milestone 12 commitem `3ba78aa` i pushem gałęzi `codex/okładki` do `origin`; wrap-up doprowadził `STATUS.md` do stanu po pushu.
