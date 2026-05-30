@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from dataclasses import dataclass
 from pathlib import Path
+from xml.etree import ElementTree
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -20,6 +21,9 @@ from sonos_album_controller.playback import (  # noqa: E402
     skip_previous,
     start_album_playback,
 )
+
+
+UPNP_NAMESPACE = "urn:schemas-upnp-org:metadata-1-0/upnp/"
 
 
 @dataclass
@@ -137,6 +141,18 @@ class PlaybackTest(unittest.TestCase):
             cache_path=Path(temp_dir.name) / "albums.json",
         )
 
+    def _add_uri_metadata(self) -> str:
+        speaker = RecordingSpeaker.instances[-1]
+        payload = speaker.calls[1][1]
+        assert isinstance(payload, list)
+        metadata = dict(payload)["EnqueuedURIMetaData"]
+        assert isinstance(metadata, str)
+        return metadata
+
+    def _album_art_values(self, metadata: str) -> list[str | None]:
+        root = ElementTree.fromstring(metadata)
+        return [element.text for element in root.iter() if element.tag.rsplit("}", 1)[-1] == "albumArtURI"]
+
     def test_start_album_playback_clears_queue_adds_full_album_and_starts_selected_index(self) -> None:
         report = start_album_playback(
             self._config(),
@@ -198,6 +214,66 @@ class PlaybackTest(unittest.TestCase):
             ["clear_queue", "AddURIToQueue", "play_from_queue", "get_queue"],
         )
         self.assertEqual(speaker.calls[2], ("play_from_queue", 0))
+        metadata = self._add_uri_metadata()
+        self.assertEqual(self._album_art_values(metadata), ["https://example.test/cover.jpg"])
+
+    def test_start_album_playback_does_not_duplicate_existing_album_art_metadata(self) -> None:
+        class ExistingAlbumArtLibrary(EmptyMusicLibrary):
+            def __init__(self, speaker: RecordingSpeaker) -> None:
+                super().__init__(speaker)
+                self.album.resource_meta_data = (
+                    f'<DIDL-Lite xmlns:upnp="{UPNP_NAMESPACE}">'
+                    '<item id="album:1">'
+                    '<upnp:albumArtURI>https://example.test/existing.jpg</upnp:albumArtURI>'
+                    "</item>"
+                    "</DIDL-Lite>"
+                )
+
+        report = start_album_playback(
+            self._config(),
+            "album:1",
+            0,
+            speaker_factory=RecordingSpeaker,
+            music_library_factory=ExistingAlbumArtLibrary,
+        )
+
+        self.assertEqual(report.status, "ok")
+        metadata = self._add_uri_metadata()
+        self.assertEqual(self._album_art_values(metadata), ["https://example.test/existing.jpg"])
+
+    def test_start_album_playback_leaves_metadata_unchanged_when_album_art_is_missing(self) -> None:
+        class MissingAlbumArtLibrary(EmptyMusicLibrary):
+            def __init__(self, speaker: RecordingSpeaker) -> None:
+                super().__init__(speaker)
+                self.album.album_art_uri = None
+
+        report = start_album_playback(
+            self._config(),
+            "album:1",
+            0,
+            speaker_factory=RecordingSpeaker,
+            music_library_factory=MissingAlbumArtLibrary,
+        )
+
+        self.assertEqual(report.status, "ok")
+        self.assertEqual(self._add_uri_metadata(), "<DIDL-Lite><item id=\"album:1\" /></DIDL-Lite>")
+
+    def test_start_album_playback_leaves_unparseable_metadata_unchanged(self) -> None:
+        class BrokenMetadataLibrary(EmptyMusicLibrary):
+            def __init__(self, speaker: RecordingSpeaker) -> None:
+                super().__init__(speaker)
+                self.album.resource_meta_data = "<DIDL-Lite><item>"
+
+        report = start_album_playback(
+            self._config(),
+            "album:1",
+            0,
+            speaker_factory=RecordingSpeaker,
+            music_library_factory=BrokenMetadataLibrary,
+        )
+
+        self.assertEqual(report.status, "ok")
+        self.assertEqual(self._add_uri_metadata(), "<DIDL-Lite><item>")
 
     def test_start_album_playback_reports_empty_when_container_metadata_is_missing(self) -> None:
         class EmptyMetadataLibrary(EmptyMusicLibrary):

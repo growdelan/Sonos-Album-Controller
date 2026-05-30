@@ -97,6 +97,11 @@ Miejsca wymagające walidacji lub smoke testów:
 - Konsekwencje: Tracklista dla takich albumów nie jest znana przed uruchomieniem fallbacku; samo wejście w album nie może niszczyć bieżącej kolejki tylko po to, aby odkryć utwory.
 - Dotyczy PRD / milestone’u: PRD 4.3, FR-8, FR-9, FR-10; Milestone 6.
 
+- Decyzja: Fallback `AddURIToQueue` wzbogaca DIDL-Lite metadata o `upnp:albumArtURI`, jeśli album ma znane `album_art_uri`, a metadata nie zawierają jeszcze okładki. (dotyczy PRD: 004-okladki-w-ostatnio-odtworzonych.md)
+- Uzasadnienie: Realne Sonos Favorites dla Apple Music zwracają URL okładki jako osobne pole, ale `resource_meta_data` używane przy `AddURIToQueue` nie zawiera `albumArtURI`, przez co oficjalna aplikacja Sonos może pokazywać album w `Ostatnio odtwarzane` bez okładki.
+- Konsekwencje: Przed wysłaniem `EnqueuedURIMetaData` backend wykonuje bezpieczne wzbogacenie XML standardowym parserem. Brak okładki, istniejące `albumArtURI` albo błąd parsowania metadata nie blokują odtwarzania i zachowują oryginalne metadata.
+- Dotyczy PRD / milestone’u: `prd/004-okladki-w-ostatnio-odtworzonych.md`; Milestone 12.
+
 - Decyzja: Po załadowaniu widocznej tracklisty wybór innego utworu powinien preferować przeskok do indeksu w aktualnej kolejce albumu, a nie ponowne czyszczenie i ładowanie albumu. (dotyczy PRD: 002-wybor-piosenki-z-listy.md)
 - Uzasadnienie: PRD 002 wymaga, aby lista utworów odkryta po fallbackowym `AddURIToQueue` była użyteczna jako nawigacja po albumie, bez wielokrotnego klikania `Następny` i `Poprzedni`.
 - Konsekwencje: Backend musi potwierdzić zmianę indeksu przed aktualizacją aktywnego wiersza w UI; błędna operacja nie może zostawić fałszywego stanu odtwarzania. Jeśli aktualna kolejka nie odpowiada widocznej trackliście, aplikacja może użyć istniejącej ścieżki startu albumu od wybranego indeksu.
@@ -196,5 +201,5 @@ Wspólne wymagania jakościowe dla całego projektu:
 ## Status specyfikacji
 
 - Data utworzenia: 2026-05-22
-- Ostatnia aktualizacja: 2026-05-23
-- Aktualny zakres obowiązywania: MVP lokalnej aplikacji WWW do sterowania jednym Sonos Era 300 zgodnie z `prd/000-initial-prd.md`, rozszerzone o wymagania premium music-first UI z `prd/001-premium-music-ui.md`, wybór piosenki z widocznej tracklisty z `prd/002-wybor-piosenki-z-listy.md` oraz wzbogacanie artystów albumów z `prd/003-artysci-albumow.md`
+- Ostatnia aktualizacja: 2026-05-30
+- Aktualny zakres obowiązywania: MVP lokalnej aplikacji WWW do sterowania jednym Sonos Era 300 zgodnie z `prd/000-initial-prd.md`, rozszerzone o wymagania premium music-first UI z `prd/001-premium-music-ui.md`, wybór piosenki z widocznej tracklisty z `prd/002-wybor-piosenki-z-listy.md`, wzbogacanie artystów albumów z `prd/003-artysci-albumow.md` oraz okładki albumów w metadanych `AddURIToQueue` z `prd/004-okladki-w-ostatnio-odtworzonych.md`

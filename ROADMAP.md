@@ -599,3 +599,52 @@ Uwagi:
 - zakres ocenia się jako średni: zmiana dotyka backendowego wzbogacania metadanych, cache i prezentacji UI, ale nie zmienia playbacku ani źródeł muzyki
 - publiczny Apple/iTunes lookup jest nowym zachowaniem sieciowym; musi pozostać best effort, cache’owane i nieblokujące dla lokalnego działania aplikacji
 - milestone zakończony po pozytywnym ponownym self-review; implementacja przeszła testy automatyczne, `py_compile`, `node --check`, `git diff --check`, Browser smoke z tymczasowym cache oraz realny smoke odświeżenia albumów dla `SONOS_SPEAKER_IP=192.168.0.172`; po self-review dodano budżet czasu lookupów i circuit breaker
+
+---
+
+## Milestone 12: Okładki albumów w Ostatnio odtwarzanych Sonos (done)
+
+Cel:
+- przekazywać Sonosowi URL okładki albumu w DIDL-Lite metadata wysyłanych do `AddURIToQueue`
+- naprawić przypadek, w którym oficjalna aplikacja mobilna Sonos pokazuje album w `Ostatnio odtwarzane` bez okładki po uruchomieniu albumu przez tę aplikację
+- zachować istniejący fallback odtwarzania albumów Apple Music bez zmiany publicznego API, UI ani cache
+
+Definition of Done:
+- payload `AddURIToQueue` zawiera `upnp:albumArtURI`, gdy album ma znane `album_art_uri`
+- istniejące `albumArtURI` w metadanych nie jest duplikowane
+- brak `album_art_uri` nie blokuje odtwarzania i zostawia metadata bez zmian
+- nieparsowalne DIDL-Lite metadata nie blokują odtwarzania i są wysyłane bez zmian
+- testy automatyczne pokrywają scenariusze wzbogacenia, braku duplikacji, braku okładki i błędnego XML
+- nie dodano nowych zależności ani nie zmieniono źródeł muzyki
+
+Zakres:
+- PRD 004 opisujące problem i plan naprawczy
+- wzbogacenie `EnqueuedURIMetaData` w ścieżce fallbacku `AddURIToQueue`
+- testy regresji payloadu wysyłanego do Sonosa
+- aktualizacja dokumentacji operacyjnej i decyzji technicznej
+
+Poza zakresem:
+- lokalne pobieranie lub cache’owanie plików okładek
+- gwarancja, że oficjalna aplikacja Sonos zawsze pokaże okładkę
+- oficjalne Sonos Control API
+- zmiany frontendowe
+- zmiany schematu cache
+- zmiany tracklisty, pętli, playera albo źródeł muzyki
+
+Walidacja:
+- `uv run python -m unittest tests.test_playback`
+- `uv run python -m unittest discover -s tests -p "test_*.py"`
+- `uv run python -m py_compile src/sonos_album_controller/playback.py`
+- `git diff --check`
+- opcjonalny ręczny smoke z realnym `SONOS_SPEAKER_IP`: uruchomienie albumu i sprawdzenie `Ostatnio odtwarzane` w aplikacji mobilnej Sonos
+
+Kontrakt sprintu:
+- utworzony przed implementacją: tak
+- najważniejsze walidacje: testy payloadu `AddURIToQueue`, pełny `unittest`, `py_compile`, `git diff --check`
+- stop conditions: konieczność zmiany publicznego API, UI, cache schema albo wyjście poza bezpieczne wzbogacanie metadanych
+
+Uwagi:
+- milestone wynika z `prd/004-okladki-w-ostatnio-odtworzonych.md`
+- analiza realnego Sonos Era 300 potwierdziła, że Favorites zawierają `album_art_uri`, ale `resource_meta_data` dla albumów `<ASSEMBLE24>`, `EYES CLOSED - Single` i `abouTZU - EP` nie zawiera `albumArtURI`
+- implementacja przekazuje kompletniejsze metadata do Sonosa, ale finalne wyświetlenie okładki w oficjalnej aplikacji Sonos pozostaje zależne od zachowania Sonosa
+- milestone zakończony po pozytywnym self-review; automatyczna walidacja i read-only smoke realnych Favorites potwierdziły wzbogacenie metadata, a ręczny smoke w aplikacji mobilnej Sonos pozostaje opcjonalną walidacją integracyjną po finalizacji
