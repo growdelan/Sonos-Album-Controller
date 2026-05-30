@@ -1,5 +1,6 @@
 from dataclasses import asdict, dataclass
 from typing import Any, Literal
+from xml.etree import ElementTree
 
 from soco import SoCo
 from soco.music_library import MusicLibrary
@@ -19,6 +20,12 @@ from sonos_album_controller.config import AppConfig, SONOS_SPEAKER_IP_ENV
 
 
 RepeatMode = Literal["none", "album", "track"]
+UPNP_NAMESPACE = "urn:schemas-upnp-org:metadata-1-0/upnp/"
+
+ElementTree.register_namespace("", "urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/")
+ElementTree.register_namespace("dc", "http://purl.org/dc/elements/1.1/")
+ElementTree.register_namespace("upnp", UPNP_NAMESPACE)
+ElementTree.register_namespace("r", "urn:schemas-rinconnetworks-com:metadata-1-0/")
 
 
 @dataclass(frozen=True)
@@ -424,6 +431,7 @@ def _start_album_container_playback(speaker: Any, album: Album, album_item: Any,
         )
 
     try:
+        metadata = _metadata_with_album_art(metadata, album.album_art_uri, logger)
         speaker.clear_queue()
         add_result = speaker.avTransport.AddURIToQueue(
             [
@@ -459,6 +467,50 @@ def _start_album_container_playback(speaker: Any, album: Album, album_item: Any,
         ),
         tracks=tracks,
     )
+
+
+def _metadata_with_album_art(metadata: str, album_art_uri: str | None, logger: Any) -> str:
+    album_art_uri = _first_existing_text(album_art_uri)
+    if album_art_uri is None:
+        return metadata
+
+    try:
+        root = ElementTree.fromstring(metadata)
+    except ElementTree.ParseError as error:
+        logger.warning("Nie udalo sie dodac okladki do metadanych albumu: %s", error)
+        return metadata
+
+    if _has_xml_element(root, "albumArtURI"):
+        return metadata
+
+    target = _first_xml_element(root, {"item", "container"})
+    if target is None:
+        return metadata
+
+    _insert_album_art_element(target, album_art_uri)
+    return ElementTree.tostring(root, encoding="unicode")
+
+
+def _insert_album_art_element(target: ElementTree.Element, album_art_uri: str) -> None:
+    album_art_element = ElementTree.Element(f"{{{UPNP_NAMESPACE}}}albumArtURI")
+    album_art_element.text = album_art_uri
+    for index, child in enumerate(list(target)):
+        if _xml_local_name(child.tag) in {"class", "desc"}:
+            target.insert(index, album_art_element)
+            return
+    target.append(album_art_element)
+
+
+def _has_xml_element(root: ElementTree.Element, local_name: str) -> bool:
+    return any(_xml_local_name(element.tag) == local_name for element in root.iter())
+
+
+def _first_xml_element(root: ElementTree.Element, local_names: set[str]) -> ElementTree.Element | None:
+    return next((element for element in root.iter() if _xml_local_name(element.tag) in local_names), None)
+
+
+def _xml_local_name(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
 
 
 def _first_existing_text(*values: Any) -> str | None:
