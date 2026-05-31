@@ -10,6 +10,15 @@ const playerState = {
     progressTimer: null,
 };
 
+const libraryState = {
+    report: null,
+    albums: [],
+    query: "",
+    sortBy: "sonos",
+    sortDirection: "asc",
+    missingArtistOnly: false,
+};
+
 async function loadStatus() {
     const message = document.querySelector("#status-message");
     const backendStatus = document.querySelector("#backend-status");
@@ -381,6 +390,112 @@ function renderCover(target, album, placeholderText = "Album") {
     }
 }
 
+function normalizeLibraryText(value) {
+    const text = value === null || value === undefined ? "" : String(value);
+    const polishCharacters = {
+        ą: "a",
+        ć: "c",
+        ę: "e",
+        ł: "l",
+        ń: "n",
+        ó: "o",
+        ś: "s",
+        ź: "z",
+        ż: "z",
+        Ą: "a",
+        Ć: "c",
+        Ę: "e",
+        Ł: "l",
+        Ń: "n",
+        Ó: "o",
+        Ś: "s",
+        Ź: "z",
+        Ż: "z",
+    };
+    return Array.from(text.normalize("NFD"))
+        .map((character) => polishCharacters[character] || character)
+        .join("")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+}
+
+function hasArtist(album) {
+    return typeof album.artist === "string" && album.artist.trim().length > 0;
+}
+
+function albumMatchesQuery(album, query) {
+    const normalizedQuery = normalizeLibraryText(query).trim();
+    if (!normalizedQuery) {
+        return true;
+    }
+    const searchable = normalizeLibraryText(`${album.title || ""} ${album.artist || ""}`);
+    return searchable.includes(normalizedQuery);
+}
+
+function compareLibraryText(left, right) {
+    const normalizedLeft = normalizeLibraryText(left);
+    const normalizedRight = normalizeLibraryText(right);
+    return normalizedLeft.localeCompare(normalizedRight, "pl");
+}
+
+function compareAlbumsByTitle(left, right, direction) {
+    const result = compareLibraryText(left.title, right.title);
+    return direction === "desc" ? -result : result;
+}
+
+function compareAlbumsByArtist(left, right, direction) {
+    const leftMissing = !hasArtist(left);
+    const rightMissing = !hasArtist(right);
+    if (leftMissing && !rightMissing) {
+        return 1;
+    }
+    if (!leftMissing && rightMissing) {
+        return -1;
+    }
+    const artistResult = compareLibraryText(left.artist, right.artist);
+    if (artistResult !== 0) {
+        return direction === "desc" ? -artistResult : artistResult;
+    }
+    return compareAlbumsByTitle(left, right, direction);
+}
+
+function getVisibleAlbums(albums, state) {
+    const indexedAlbums = albums.map((album, index) => ({ album, index }));
+    const filteredAlbums = indexedAlbums.filter(({ album }) => {
+        if (state.missingArtistOnly && hasArtist(album)) {
+            return false;
+        }
+        return albumMatchesQuery(album, state.query);
+    });
+
+    if (state.sortBy === "title") {
+        filteredAlbums.sort((left, right) => (
+            compareAlbumsByTitle(left.album, right.album, state.sortDirection) || left.index - right.index
+        ));
+    } else if (state.sortBy === "artist") {
+        filteredAlbums.sort((left, right) => (
+            compareAlbumsByArtist(left.album, right.album, state.sortDirection) || left.index - right.index
+        ));
+    }
+
+    return filteredAlbums.map(({ album }) => album);
+}
+
+function isCacheReport(report) {
+    return report && (report.status === "cached" || report.source === "cache");
+}
+
+function formatCacheStatusLabel(report) {
+    return isCacheReport(report) ? "Z cache" : "Nie z cache";
+}
+
+function formatAlbumCount(visibleCount, totalCount) {
+    if (totalCount === 0) {
+        return "0 albumow";
+    }
+    return `${visibleCount} z ${totalCount} albumow`;
+}
+
 function renderAlbums(report) {
     const grid = document.querySelector("#albums-grid");
     const message = document.querySelector("#albums-message");
@@ -388,42 +503,97 @@ function renderAlbums(report) {
     const lastRefresh = document.querySelector("#last-refresh-label");
     const albums = Array.isArray(report.albums) ? report.albums : [];
 
+    libraryState.report = report;
+    libraryState.albums = albums.slice();
     grid.replaceChildren();
     grid.classList.remove("is-loading");
-    count.textContent = `${albums.length} albumow`;
     lastRefresh.textContent = report.last_refresh
         ? `Ostatnie odswiezenie: ${report.last_refresh}`
         : "Ostatnie odswiezenie: -";
+    updateLibraryControls();
+    updateLibraryStatusChips();
 
     if (report.status === "not_configured") {
+        count.textContent = "0 albumow";
+        hideLibraryEmptyAction();
         setPanelMessage(message, report.message || "Skonfiguruj IP glosnika, aby pobrac albumy.", "warning");
         return;
     }
 
     if (report.status === "error") {
+        count.textContent = "0 albumow";
+        hideLibraryEmptyAction();
         setPanelMessage(message, report.message || "Nie udalo sie pobrac albumow.", "error");
         return;
     }
+
+    renderLibraryView();
+}
+
+function renderLibraryView() {
+    const report = libraryState.report || {};
+    const albums = libraryState.albums;
+    const grid = document.querySelector("#albums-grid");
+    const message = document.querySelector("#albums-message");
+    const count = document.querySelector("#albums-count");
+    const visibleAlbums = getVisibleAlbums(albums, libraryState);
+    const hasActiveNarrowing = libraryState.query.trim().length > 0 || libraryState.missingArtistOnly;
+
+    grid.replaceChildren();
+    grid.classList.remove("is-loading");
+    updateLibraryControls();
+    updateLibraryStatusChips();
+
+    if (report.status === "not_configured") {
+        count.textContent = "0 albumow";
+        hideLibraryEmptyAction();
+        setPanelMessage(message, report.message || "Skonfiguruj IP glosnika, aby pobrac albumy.", "warning");
+        return;
+    }
+
+    if (report.status === "error") {
+        count.textContent = "0 albumow";
+        hideLibraryEmptyAction();
+        setPanelMessage(message, report.message || "Nie udalo sie pobrac albumow.", "error");
+        return;
+    }
+
+    count.textContent = formatAlbumCount(visibleAlbums.length, albums.length);
 
     if (report.status === "cached") {
         const cacheMessage = report.last_refresh
             ? `${report.message || "Pokazuje dane z cache."} Ostatnie dane: ${report.last_refresh}.`
             : report.message || "Pokazuje dane z cache.";
-        setPanelMessage(message, albums.length === 0
+        setPanelMessage(message, visibleAlbums.length === 0 && hasActiveNarrowing
+            ? "Brak albumow pasujacych do wyszukiwania lub filtrow."
+            : albums.length === 0
             ? `${cacheMessage} Cache nie zawiera albumow.`
             : cacheMessage, "warning");
-        if (albums.length === 0) {
+        setLibraryEmptyActionVisible(visibleAlbums.length === 0 && hasActiveNarrowing && albums.length > 0);
+        if (visibleAlbums.length === 0) {
             return;
         }
     } else {
         if (albums.length === 0) {
+            hideLibraryEmptyAction();
             setPanelMessage(message, "Brak albumow do wyswietlenia.", "warning");
             return;
         }
+        if (visibleAlbums.length === 0) {
+            setPanelMessage(message, "Brak albumow pasujacych do wyszukiwania lub filtrow.", "warning");
+            setLibraryEmptyActionVisible(hasActiveNarrowing);
+            return;
+        }
+        hideLibraryEmptyAction();
         setPanelMessage(message, report.last_refresh
             ? `Ostatnie odswiezenie: ${report.last_refresh}.`
             : "");
     }
+    renderAlbumCards(visibleAlbums);
+}
+
+function renderAlbumCards(albums) {
+    const grid = document.querySelector("#albums-grid");
     albums.forEach((album, index) => {
         const card = document.createElement("button");
         card.type = "button";
@@ -449,6 +619,48 @@ function renderAlbums(report) {
         card.append(cover, title, artist);
         grid.appendChild(card);
     });
+}
+
+function updateLibraryControls() {
+    const missingArtistCount = libraryState.albums.filter((album) => !hasArtist(album)).length;
+    const searchInput = document.querySelector("#album-search-input");
+    const sortSelect = document.querySelector("#album-sort-select");
+    const directionButton = document.querySelector("#album-sort-direction-button");
+    const missingArtistButton = document.querySelector("#missing-artist-filter-button");
+
+    searchInput.value = libraryState.query;
+    sortSelect.value = libraryState.sortBy;
+    directionButton.disabled = libraryState.sortBy === "sonos";
+    directionButton.textContent = libraryState.sortDirection === "asc" ? "A-Z" : "Z-A";
+    directionButton.setAttribute("aria-label", `Kierunek sortowania: ${directionButton.textContent}`);
+    missingArtistButton.textContent = `Bez artysty (${missingArtistCount})`;
+    missingArtistButton.setAttribute("aria-pressed", String(libraryState.missingArtistOnly));
+}
+
+function updateLibraryStatusChips() {
+    const report = libraryState.report || {};
+    const cacheChip = document.querySelector("#cache-status-chip");
+    const refreshChip = document.querySelector("#refresh-status-chip");
+    const cacheLabel = formatCacheStatusLabel(report);
+    cacheChip.classList.toggle("is-active", isCacheReport(report));
+    cacheChip.textContent = cacheLabel;
+    cacheChip.setAttribute("aria-label", `Status cache: ${cacheLabel}`);
+    refreshChip.classList.toggle("is-active", Boolean(report.last_refresh));
+    refreshChip.textContent = report.last_refresh ? `Ostatnio: ${report.last_refresh}` : "Ostatnio: -";
+}
+
+function setLibraryEmptyActionVisible(visible) {
+    document.querySelector("#library-empty-actions").hidden = !visible;
+}
+
+function hideLibraryEmptyAction() {
+    setLibraryEmptyActionVisible(false);
+}
+
+function clearLibraryFilters() {
+    libraryState.query = "";
+    libraryState.missingArtistOnly = false;
+    renderLibraryView();
 }
 
 function renderTracks(tracks, albumId) {
@@ -870,28 +1082,66 @@ async function toggleRepeatMode() {
     }
 }
 
-document.querySelector("#refresh-albums-button").addEventListener("click", () => loadAlbums(true));
-document.querySelector("#diagnostics-button").addEventListener("click", () => {
-    if (document.querySelector("#diagnostics-panel").hidden) {
-        loadDiagnostics();
-    } else {
-        showDiagnosticsPanel(false);
-    }
-});
-document.querySelector("#connection-test-button").addEventListener("click", testConnection);
-document.querySelector("#back-to-albums-button").addEventListener("click", showAlbumsView);
-document.querySelector("#previous-control-button").addEventListener("click", playPreviousTrack);
-document.querySelector("#play-pause-control-button").addEventListener("click", togglePlaybackState);
-document.querySelector("#next-control-button").addEventListener("click", playNextTrack);
-document.querySelector("#repeat-control-button").addEventListener("click", toggleRepeatMode);
-document.querySelector("#mute-control-button").addEventListener("click", togglePreparedMuteControl);
-document.querySelector("#volume-control").addEventListener("input", () => {
-    const volume = Number(document.querySelector("#volume-control").value);
-    document.querySelector("#volume-value").textContent = `${volume}%`;
-});
-document.querySelector("#volume-control").addEventListener("change", updateVolume);
+function initializeApp() {
+    document.querySelector("#refresh-albums-button").addEventListener("click", () => loadAlbums(true));
+    document.querySelector("#diagnostics-button").addEventListener("click", () => {
+        if (document.querySelector("#diagnostics-panel").hidden) {
+            loadDiagnostics();
+        } else {
+            showDiagnosticsPanel(false);
+        }
+    });
+    document.querySelector("#connection-test-button").addEventListener("click", testConnection);
+    document.querySelector("#back-to-albums-button").addEventListener("click", showAlbumsView);
+    document.querySelector("#previous-control-button").addEventListener("click", playPreviousTrack);
+    document.querySelector("#play-pause-control-button").addEventListener("click", togglePlaybackState);
+    document.querySelector("#next-control-button").addEventListener("click", playNextTrack);
+    document.querySelector("#repeat-control-button").addEventListener("click", toggleRepeatMode);
+    document.querySelector("#mute-control-button").addEventListener("click", togglePreparedMuteControl);
+    document.querySelector("#volume-control").addEventListener("input", () => {
+        const volume = Number(document.querySelector("#volume-control").value);
+        document.querySelector("#volume-value").textContent = `${volume}%`;
+    });
+    document.querySelector("#volume-control").addEventListener("change", updateVolume);
+    document.querySelector("#album-search-input").addEventListener("input", (event) => {
+        libraryState.query = event.target.value;
+        renderLibraryView();
+    });
+    document.querySelector("#album-sort-select").addEventListener("change", (event) => {
+        libraryState.sortBy = event.target.value;
+        renderLibraryView();
+    });
+    document.querySelector("#album-sort-direction-button").addEventListener("click", () => {
+        if (libraryState.sortBy === "sonos") {
+            return;
+        }
+        libraryState.sortDirection = libraryState.sortDirection === "asc" ? "desc" : "asc";
+        renderLibraryView();
+    });
+    document.querySelector("#missing-artist-filter-button").addEventListener("click", () => {
+        libraryState.missingArtistOnly = !libraryState.missingArtistOnly;
+        renderLibraryView();
+    });
+    document.querySelector("#clear-library-filters-button").addEventListener("click", clearLibraryFilters);
 
-updateRepeatButton();
-updateProgressDisplay(0);
-loadStatus();
-loadAlbums();
+    updateRepeatButton();
+    updateProgressDisplay(0);
+    updateLibraryControls();
+    updateLibraryStatusChips();
+    loadStatus();
+    loadAlbums();
+}
+
+if (typeof window === "undefined" && typeof module !== "undefined" && module.exports) {
+    module.exports = {
+        albumMatchesQuery,
+        formatAlbumCount,
+        formatCacheStatusLabel,
+        getVisibleAlbums,
+        hasArtist,
+        isCacheReport,
+        normalizeLibraryText,
+    };
+} else {
+    initializeApp();
+}
