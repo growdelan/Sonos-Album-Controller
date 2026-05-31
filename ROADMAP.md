@@ -648,3 +648,66 @@ Uwagi:
 - analiza realnego Sonos Era 300 potwierdziła, że Favorites zawierają `album_art_uri`, ale `resource_meta_data` dla albumów `<ASSEMBLE24>`, `EYES CLOSED - Single` i `abouTZU - EP` nie zawiera `albumArtURI`
 - implementacja przekazuje kompletniejsze metadata do Sonosa, ale finalne wyświetlenie okładki w oficjalnej aplikacji Sonos pozostaje zależne od zachowania Sonosa
 - milestone zakończony po pozytywnym self-review; automatyczna walidacja i read-only smoke realnych Favorites potwierdziły wzbogacenie metadata, a ręczny smoke w aplikacji mobilnej Sonos pozostaje opcjonalną walidacją integracyjną po finalizacji
+
+---
+
+## Milestone 13: Wyszukiwanie i sortowanie albumów (done)
+
+Cel:
+- dodać lokalne wyszukiwanie albumów po tytule i artyście na ekranie biblioteki
+- dodać sortowanie po kolejności z API/Sonosa, tytule i artyście bez zmiany backendu
+- dodać filtr `bez artysty` oraz informacyjne chipy `z cache` i `ostatnio odświeżone`
+- zachować premium music-first charakter ekranu albumów i brak nowych zależności
+
+Definition of Done:
+- nad siatką albumów znajduje się kompaktowy pasek narzędzi biblioteki z polem wyszukiwania, sortowaniem, filtrem `bez artysty` i chipami statusu
+- wyszukiwanie działa lokalnie na aktualnej odpowiedzi `/api/albums`, na żywo, po tytule i artyście
+- wyszukiwanie ignoruje wielkość liter oraz znaki diakrytyczne
+- domyślna kolejność albumów pozostaje pierwotną kolejnością tablicy zwróconej przez `/api/albums`
+- użytkownik może sortować po tytule i artyście w kierunkach A-Z oraz Z-A
+- przy sortowaniu po artyście albumy bez artysty trafiają na koniec, a tytuł jest tie-breakerem
+- filtr `bez artysty` pokazuje tylko albumy z pustym lub brakującym `artist`
+- UI pokazuje licznik wyników względem pełnej listy oraz liczbę albumów bez artysty
+- chip `z cache` odzwierciedla status raportu z cache, a chip `ostatnio odświeżone` używa istniejącego `last_refresh`
+- pusty stan po wyszukiwaniu albo filtrze pokazuje akcję czyszczenia tekstu i filtra bez resetowania sortowania
+- stan wyszukiwania, sortowania i filtra zostaje zachowany po wejściu w album, powrocie do biblioteki i kliknięciu `Odśwież albumy`, ale resetuje się po pełnym przeładowaniu strony
+- nie zmieniono publicznego API, backendu, modeli danych, schematu cache, playbacku ani diagnostyki
+
+Zakres:
+- statyczny frontend HTML/CSS/vanilla JavaScript dla ekranu biblioteki albumów
+- lokalna normalizacja tekstu do wyszukiwania bez uwzględniania wielkości liter i diakrytyków
+- lokalne sortowanie i filtrowanie listy albumów po danych już obecnych w odpowiedzi `/api/albums`
+- kompaktowe kontrolki i chipy statusu nad siatką albumów
+- stany pustego wyniku, liczniki oraz zachowanie ustawień w bieżącej sesji frontendu
+- testy automatyczne lub statyczne kontraktu frontendu bez realnego Sonosa
+
+Poza zakresem:
+- nowe endpointy API
+- backendowe wyszukiwanie, sortowanie lub filtrowanie
+- zmiany schematu cache albo nowe pola modelu albumu
+- utrwalanie ustawień w `localStorage`, query string albo hash URL
+- wyszukiwanie w trackliście
+- obsługa playlist, radia albo pojedynczych utworów jako źródeł biblioteki
+- zmiany playbacku, kolejki, pętli, playera, diagnostyki albo integracji SoCo
+- nowe zależności frontendowe, bundler, framework albo biblioteka ikon
+
+Walidacja:
+- `uv run python -m unittest discover -s tests -p "test_*.py"`
+- `node --check src/sonos_album_controller/static/app.js`
+- `git diff --check`
+- test statyczny frontendu potwierdzający obecność kontrolek biblioteki i brak zmian API
+- test logiki wyszukiwania po tytule i artyście, case-insensitive oraz diacritics-insensitive
+- test sortowania w kolejności API, po tytule A-Z/Z-A i po artyście A-Z/Z-A z albumami bez artysty na końcu
+- test filtra `bez artysty`, liczników wyników, pustego stanu i akcji czyszczenia
+- Browser smoke desktop/mobile: toolbar nad siatką, brak poziomego overflow, powrót z widoku albumu zachowuje ustawienia, a odświeżenie albumów stosuje bieżące ustawienia do nowej listy
+
+Kontrakt sprintu:
+- wymagany przed implementacją: tak
+- najważniejsze walidacje: testy logiki frontendu, `node --check`, pełny `unittest`, Browser smoke desktop/mobile
+- stop conditions: konieczność zmiany publicznego API, backendu, schematu cache albo utrwalania stanu poza bieżącą sesją bez osobnej decyzji
+
+Uwagi:
+- milestone wynika z `prd/005-wyszukiwanie-sortowanie-albumow.md`
+- zakres ocenia się jako mały: zmiana jest lokalna dla istniejącego frontendu biblioteki albumów i nie wymaga nowych zależności, backendu ani realnego Sonosa
+- status `z cache` i `ostatnio odświeżone` dotyczy całej listy albumów, nie pojedynczych albumów
+- milestone zakończony po poprawkach self-review i pozytywnym ponownym self-review; automatyczna walidacja, statyczny kontrakt frontendu oraz wcześniejszy Browser smoke desktop/mobile potwierdziły zakres bez zmian API, backendu, cache i zależności

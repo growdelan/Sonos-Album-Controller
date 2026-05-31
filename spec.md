@@ -4,7 +4,7 @@
 
 Aplikacja ma być prywatnym, lokalnym webowym kontrolerem jednego głośnika Sonos Era 300 w tej samej sieci domowej. Rozwiązuje problem szybkiego przeglądania albumów zapisanych w Sonos Favorites / My Sonos oraz uruchamiania odtwarzania albumu od wybranego utworu bez korzystania z oficjalnego Sonos Control API, OAuth ani zdalnego dostępu.
 
-Głównym użytkownikiem jest właściciel jednego głośnika Sonos Era 300, korzystający głównie z Apple Music przez Sonos. Zakres MVP obejmuje lokalny backend Python, statyczny frontend desktopowy, cache albumów, diagnostykę połączenia i podstawowe sterowanie odtwarzaniem. Kolejny przyrost `prd/001-premium-music-ui.md` rozszerza wymagania frontendu o premium music-first UI, responsywność mobile/tablet oraz dopracowaną dostępność bez zmiany backendu, endpointów ani zależności. Przyrost `prd/002-wybor-piosenki-z-listy.md` rozszerza playback o bezpośredni wybór dowolnej widocznej piosenki z tracklisty, w tym tracklisty odkrytej po załadowaniu albumu do kolejki Sonosa. Przyrost `prd/003-artysci-albumow.md` rozszerza metadane albumów o best effort uzupełnianie artysty przez Apple/iTunes lookup po Apple album ID z metadanych Sonosa oraz usuwa widoczny fallback `Wykonawca nieznany` z UI.
+Głównym użytkownikiem jest właściciel jednego głośnika Sonos Era 300, korzystający głównie z Apple Music przez Sonos. Zakres MVP obejmuje lokalny backend Python, statyczny frontend desktopowy, cache albumów, diagnostykę połączenia i podstawowe sterowanie odtwarzaniem. Kolejny przyrost `prd/001-premium-music-ui.md` rozszerza wymagania frontendu o premium music-first UI, responsywność mobile/tablet oraz dopracowaną dostępność bez zmiany backendu, endpointów ani zależności. Przyrost `prd/002-wybor-piosenki-z-listy.md` rozszerza playback o bezpośredni wybór dowolnej widocznej piosenki z tracklisty, w tym tracklisty odkrytej po załadowaniu albumu do kolejki Sonosa. Przyrost `prd/003-artysci-albumow.md` rozszerza metadane albumów o best effort uzupełnianie artysty przez Apple/iTunes lookup po Apple album ID z metadanych Sonosa oraz usuwa widoczny fallback `Wykonawca nieznany` z UI. Przyrost `prd/004-okladki-w-ostatnio-odtworzonych.md` rozszerza metadata wysyłane do `AddURIToQueue` o URL okładki albumu. Przyrost `prd/005-wyszukiwanie-sortowanie-albumow.md` rozszerza bibliotekę albumów o lokalne wyszukiwanie, sortowanie, filtr `bez artysty` i informacyjne chipy statusu bez zmiany backendu, API ani cache.
 
 Poza zakresem MVP są: logowanie, konta użytkowników, dostęp spoza sieci lokalnej, automatyczne wykrywanie wielu głośników, obsługa playlist, stacji radiowych, pojedynczych utworów jako źródeł biblioteki, konteneryzacja oraz integracja z oficjalnym Sonos Control API.
 
@@ -16,7 +16,9 @@ Aplikacja zapewnia następujące przepływy użytkownika:
 
 - otwarcie lokalnej aplikacji w przeglądarce desktopowej i zobaczenie albumów z Sonos Favorites / My Sonos
 - ręczne odświeżenie listy albumów oraz korzystanie z cache, gdy Sonos jest niedostępny
+- lokalne wyszukiwanie albumów po tytule i artyście oraz sortowanie biblioteki po kolejności z API/Sonosa, tytule albo artyście
 - zobaczenie nazw artystów dla albumów Apple Music, jeśli da się je ustalić przez Apple/iTunes lookup po identyfikatorze albumu
+- szybkie zawężenie biblioteki do albumów bez artysty oraz zobaczenie statusu danych z cache i ostatniego odświeżenia
 - wejście w widok albumu z okładką, tytułem, wykonawcą i listą utworów
 - kliknięcie wybranego utworu, wyczyszczenie kolejki Sonosa, załadowanie całego albumu i start od wybranego indeksu
 - kliknięcie dowolnego widocznego utworu z już załadowanej tracklisty, aby przeskoczyć do tego indeksu bez ponownego ładowania albumu, jeśli aktualna kolejka odpowiada temu albumowi
@@ -37,7 +39,7 @@ Aplikacja nie synchronizuje aktywnie zmian wykonanych poza nią po otwarciu wido
 2. Adapter Sonos komunikuje się z jednym głośnikiem po stałym IP z konfiguracji lokalnej i odpowiada za diagnostykę, pobieranie Favorites, rozwijanie albumów, sterowanie kolejką, odtwarzaniem, pętlą, głośnością i mute.
 3. Warstwa cache przechowuje lokalnie albumy, metadane, listy utworów, czasy trwania i czas ostatniego udanego odświeżenia. Nie musi pobierać ani zapisywać obrazów okładek lokalnie.
 4. Przy odświeżaniu albumów backend może wzbogacić brakujące pole artysty przez Apple/iTunes lookup po Apple album ID wyciągniętym z metadanych Sonosa. Wynik jest best effort, trafia do cache albumów i nie może blokować listy albumów przy braku sieci albo braku wyniku.
-5. Frontend HTML/CSS/vanilla JavaScript renderuje ekran albumów, widok albumu, player, diagnostykę, stany puste i błędy. Frontend przewiduje postęp utworu lokalnie na podstawie czasu startu, długości utworu i trybu pętli. Widoczna tracklista jest powierzchnią wyboru utworu: kliknięcie lub aktywacja klawiaturą uruchamia wskazany indeks i aktualizuje player dopiero po potwierdzeniu backendu. Warstwa wizualna powinna używać design tokens w CSS, układu music-first, stałego dolnego playera i responsywnych reguł desktop/tablet/mobile. Jeśli artysta albumu jest pusty, frontend pomija linię/metadaną artysty zamiast pokazywać `Wykonawca nieznany`.
+5. Frontend HTML/CSS/vanilla JavaScript renderuje ekran albumów, widok albumu, player, diagnostykę, stany puste i błędy. Frontend przewiduje postęp utworu lokalnie na podstawie czasu startu, długości utworu i trybu pętli. Widoczna tracklista jest powierzchnią wyboru utworu: kliknięcie lub aktywacja klawiaturą uruchamia wskazany indeks i aktualizuje player dopiero po potwierdzeniu backendu. Warstwa wizualna powinna używać design tokens w CSS, układu music-first, stałego dolnego playera i responsywnych reguł desktop/tablet/mobile. Jeśli artysta albumu jest pusty, frontend pomija linię/metadaną artysty zamiast pokazywać `Wykonawca nieznany`. Ekran biblioteki może lokalnie wyszukiwać, filtrować i sortować albumy na podstawie aktualnej odpowiedzi `/api/albums`, bez zmiany publicznego API.
 6. Logowanie błędów i ostrzeżeń trafia do lokalnego pliku logów; zwykłe akcje informacyjne nie muszą być logowane.
 
 Przepływ startowy:
@@ -55,6 +57,7 @@ Miejsca wymagające walidacji lub smoke testów:
 - odczyt konfiguracji IP bez sekretów w repo
 - zachowanie cache przy błędzie odświeżenia
 - filtrowanie tylko albumów z Favorites
+- lokalne wyszukiwanie, sortowanie i filtr `bez artysty` w bibliotece albumów bez zmian publicznego API
 - wzbogacanie artysty po Apple album ID bez realnego Sonosa i bez niestabilnego zewnętrznego IO w testach automatycznych
 - kolejka zawierająca cały album przy starcie od wybranego utworu
 - wybór dowolnego widocznego utworu po załadowaniu tracklisty, bez fałszywej aktualizacji UI przy błędzie backendu
@@ -74,7 +77,7 @@ Miejsca wymagające walidacji lub smoke testów:
 - Cache lokalny: trwały zapis metadanych albumów i czasu ostatniego odświeżenia, z ochroną przed usunięciem działającego cache po błędzie.
 - Serwis odtwarzania: operacje kolejki, start od indeksu, przeskok do indeksu w aktualnej kolejce, play/pause, next/previous, tryby pętli, głośność i mute.
 - Diagnostyka: test połączenia, status integracji, ostatni błąd i informacja o świeżości/cache.
-- Frontend statyczny: widok albumów, widok albumu, player, diagnostyka, komunikaty błędów, lokalna predykcja postępu, premium music-first layout, responsywność i dostępność bez zewnętrznych bibliotek frontendowych.
+- Frontend statyczny: widok albumów, lokalne wyszukiwanie/sortowanie/filtrowanie biblioteki, widok albumu, player, diagnostyka, komunikaty błędów, lokalna predykcja postępu, premium music-first layout, responsywność i dostępność bez zewnętrznych bibliotek frontendowych.
 - Logowanie: lokalne ostrzeżenia i błędy integracji, cache i odtwarzania.
 - Testy `unittest`: testy logiki bez zewnętrznego IO, z mockami/stubami integracji Sonos.
 
@@ -121,6 +124,11 @@ Miejsca wymagające walidacji lub smoke testów:
 - Uzasadnienie: PRD 001 wymaga radykalnej poprawy wyglądu, UX, responsywności i dostępności bez zmiany backendu, endpointów ani stosu frontendowego.
 - Konsekwencje: Zmiana powinna ograniczyć się do istniejącego statycznego frontendu, zachować kontrakty API i użyć CSS variables, uporządkowanych sekcji CSS, systemowego font stacku, semantycznych przycisków oraz Browser smoke dla desktopu i mobile.
 - Dotyczy PRD / milestone’u: `prd/001-premium-music-ui.md`; Milestone 9.
+
+- Decyzja: Wyszukiwanie, sortowanie i szybkie filtry biblioteki albumów będą realizowane lokalnie w statycznym frontendzie na aktualnej odpowiedzi `/api/albums`, bez zmian backendu, publicznego API i schematu cache. (dotyczy PRD: 005-wyszukiwanie-sortowanie-albumow.md)
+- Uzasadnienie: PRD 005 definiuje mały, bezpieczny przyrost głównie frontendowy, a backend już zwraca komplet danych potrzebnych do wyszukiwania po tytule/artystach, powrotu do kolejności odpowiedzi API oraz pokazania statusu cache i ostatniego odświeżenia.
+- Konsekwencje: Tryb `kolejność z Sonosa` w UI oznacza pierwotną kolejność tablicy albumów zwróconej przez `/api/albums`; status `z cache` i `ostatnio odświeżone` dotyczy całej listy, nie pojedynczych albumów; stan wyszukiwania, sortowania i filtra jest utrzymywany tylko w bieżącej sesji frontendu i nie trafia do `localStorage` ani URL.
+- Dotyczy PRD / milestone’u: `prd/005-wyszukiwanie-sortowanie-albumow.md`; Milestone 13.
 
 - Decyzja: Aplikacja steruje jednym głośnikiem Sonos Era 300 po stałym IP z lokalnej konfiguracji.
 - Uzasadnienie: PRD zakłada prywatną aplikację jednoosobową, bez automatycznego wykrywania głośników i bez wielu urządzeń.
@@ -174,6 +182,7 @@ Wspólne wymagania jakościowe dla całego projektu:
 - funkcje zależne od rzeczywistego Sonosa mają fallback lub są poprzedzone PoC
 - frontend nie może wyglądać jak panel administracyjny; albumy, okładki i player mają dominować nad statusem technicznym
 - zmiany wizualne muszą zachować istniejące API, logikę backendu, brak zależności frontendowych oraz dostępność podstawowych akcji
+- lokalne wyszukiwanie, sortowanie i filtry biblioteki albumów muszą działać bez zmian backendu, bez utrwalania stanu poza bieżącą sesją i bez mylenia statusu całej listy z metadanymi pojedynczego albumu
 - wybór utworu z tracklisty musi obsługiwać mysz i klawiaturę oraz nie może oznaczać utworu jako aktywnego bez potwierdzenia backendu
 - wzbogacanie artystów albumów jest best effort: brak wyniku albo błąd zewnętrznego lookupu nie może pogorszyć działania lokalnej aplikacji ani usuwać działającego cache
 
@@ -201,5 +210,5 @@ Wspólne wymagania jakościowe dla całego projektu:
 ## Status specyfikacji
 
 - Data utworzenia: 2026-05-22
-- Ostatnia aktualizacja: 2026-05-30
-- Aktualny zakres obowiązywania: MVP lokalnej aplikacji WWW do sterowania jednym Sonos Era 300 zgodnie z `prd/000-initial-prd.md`, rozszerzone o wymagania premium music-first UI z `prd/001-premium-music-ui.md`, wybór piosenki z widocznej tracklisty z `prd/002-wybor-piosenki-z-listy.md`, wzbogacanie artystów albumów z `prd/003-artysci-albumow.md` oraz okładki albumów w metadanych `AddURIToQueue` z `prd/004-okladki-w-ostatnio-odtworzonych.md`
+- Ostatnia aktualizacja: 2026-05-31
+- Aktualny zakres obowiązywania: MVP lokalnej aplikacji WWW do sterowania jednym Sonos Era 300 zgodnie z `prd/000-initial-prd.md`, rozszerzone o wymagania premium music-first UI z `prd/001-premium-music-ui.md`, wybór piosenki z widocznej tracklisty z `prd/002-wybor-piosenki-z-listy.md`, wzbogacanie artystów albumów z `prd/003-artysci-albumow.md`, okładki albumów w metadanych `AddURIToQueue` z `prd/004-okladki-w-ostatnio-odtworzonych.md` oraz lokalne wyszukiwanie i sortowanie biblioteki z `prd/005-wyszukiwanie-sortowanie-albumow.md`

@@ -43,7 +43,26 @@
                     </div>
                     <p id="albums-count">-</p>
                 </div>
+                <div class="library-toolbar" aria-label="Narzedzia biblioteki">
+                    <input id="album-search-input" class="library-search-input" type="search" autocomplete="off" placeholder="Tytul lub artysta" aria-label="Szukaj albumow po tytule lub artyscie">
+                    <div class="library-toolbar-group" aria-label="Sortowanie i filtry biblioteki">
+                        <select id="album-sort-select" class="library-sort-select" aria-label="Sortowanie albumow">
+                            <option value="sonos">Kolejnosc Sonosa</option>
+                            <option value="title">Tytul</option>
+                            <option value="artist">Artysta</option>
+                        </select>
+                        <button id="album-sort-direction-button" class="toolbar-button" type="button" aria-label="Kierunek sortowania" disabled>A-Z</button>
+                        <button id="missing-artist-filter-button" class="toolbar-button filter-button" type="button" aria-pressed="false">Bez artysty (0)</button>
+                    </div>
+                    <div class="library-status-chips" aria-label="Status danych biblioteki">
+                        <span id="cache-status-chip" class="library-status-chip">Z cache</span>
+                        <span id="refresh-status-chip" class="library-status-chip">Ostatnio: -</span>
+                    </div>
+                </div>
                 <p id="albums-message" class="panel-message">Ladowanie albumow...</p>
+                <div id="library-empty-actions" class="library-empty-actions" hidden>
+                    <button id="clear-library-filters-button" class="secondary-button" type="button">Wyczysc</button>
+                </div>
                 <div id="albums-grid" class="albums-grid" aria-live="polite"></div>
             </section>
 

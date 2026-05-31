@@ -11,15 +11,15 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Aktualny milestone / batch
 
-- Aktualny milestone: Milestone 12: Okładki albumów w Ostatnio odtwarzanych Sonos
-- Status: zakończony po pozytywnym self-review, zapisany commitem `3ba78aa` i wypchnięty do `origin/codex/okładki`
+- Aktualny milestone: Milestone 13: Wyszukiwanie i sortowanie albumów
+- Status: zakończony po poprawkach self-review, pozytywnym ponownym self-review i finalnych walidacjach
 - Kontrakt sprintu: ustalony przed implementacją; profil `openai_patch`, format patch/diff przez `apply_patch`
-- Zakres poza bieżącą pracą: UI, cache schema, nowe źródła muzyki, lokalne pobieranie okładek, oficjalne Sonos Control API, playlisty/radio/pojedyncze utwory spoza albumów, zmiany tracklisty, pętli, playera i sterowania, nowe zależności
+- Zakres poza bieżącą pracą: backendowe wyszukiwanie/sortowanie/filtrowanie, publiczne API, modele danych, cache schema, playback, diagnostyka, `localStorage`, query params, nowe zależności, wyszukiwanie tracklisty oraz obsługa playlist/radia/pojedynczych utworów
 
 ## Co działa
 
 - Istnieje wypełniona specyfikacja MVP lokalnej aplikacji WWW do sterowania Sonos Era 300.
-- Istnieje roadmapa rozbita na Milestone 0.5 oraz milestone’y 1-12, z walidacjami i stop conditions.
+- Istnieje roadmapa rozbita na Milestone 0.5 oraz milestone’y 1-13, z walidacjami i stop conditions.
 - Minimalna aplikacja FastAPI serwuje statyczny frontend i endpoint `/api/status`.
 - Test smoke HTTP potwierdza odpowiedź endpointu statusu i serwowanie frontendu.
 - Istnieje izolowany PoC SoCo uruchamiany lokalnie z `SONOS_SPEAKER_IP`, z kontrolowanym stanem `not_configured` bez IP.
@@ -41,6 +41,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 - Aktualnie grający utwór w trackliście ma mały animowany wskaźnik equalizera; po pauzie aktywny utwór pozostaje oznaczony statycznym symbolem.
 - Lokalnie zaimplementowano best effort wzbogacanie brakujących artystów albumów Apple Music przez Apple/iTunes lookup po Apple album ID z metadanych Sonosa; wynik trafia do istniejącego cache, a UI ukrywa pustą linię artysty zamiast pokazywać `Wykonawca nieznany`.
 - Lokalnie zaimplementowano wzbogacanie DIDL-Lite metadata wysyłanych do `AddURIToQueue` o `upnp:albumArtURI`, jeśli album ma znane `album_art_uri`, a metadata nie zawierają jeszcze okładki.
+- Lokalnie zaimplementowano frontendowe wyszukiwanie albumów po tytule i artyście, sortowanie po kolejności API/tytule/artyście, filtr `bez artysty`, liczniki wyników oraz chipy `Z cache` i `Ostatnio` bez zmian backendu, API, cache i zależności.
 
 ## Co jest skończone
 
@@ -59,19 +60,25 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 - Milestone 10 został zaimplementowany jako wybór dowolnej widocznej piosenki z tracklisty, backendowy przeskok do indeksu w aktualnej kolejce, obsługa myszą/klawiaturą i wskaźnik grania aktywnego utworu, z walidacją automatyczną, Browser smoke i pozytywnym self-review.
 - Milestone 11 został zaimplementowany jako best effort wzbogacanie artystów albumów Apple Music przez Apple/iTunes lookup, z cache, budżetem czasu lookupów, ukryciem pustej linii artysty w UI, realnym smoke Sonos i pozytywnym ponownym self-review.
 - Milestone 12 został zaimplementowany jako wzbogacenie `EnqueuedURIMetaData` o `upnp:albumArtURI` dla fallbacku `AddURIToQueue`, z testami regresji payloadu, read-only smoke realnych Favorites i pozytywnym self-review.
+- Milestone 13 został zaimplementowany jako frontendowe wyszukiwanie i sortowanie albumów, filtr `bez artysty`, liczniki wyników oraz chipy statusu listy, z testami logiki frontendu, Browser smoke desktop/mobile, poprawkami po self-review i pozytywnym ponownym self-review.
 
 ## Co jest w trakcie
 
-- Brak aktywnej implementacji; Milestone 12 jest zakończony, zapisany w repo i wypchnięty do `origin/codex/okładki`.
+- Brak aktywnej implementacji; Milestone 13 i korekta wizualna toolbara wyszukiwania albumów są zakończone po review, walidacji, commicie i pushu do `origin/codex/wyszukiwanie`.
 
 ## Co jest następne
 
-- Opcjonalnie wykonać ręczny smoke w oficjalnej aplikacji Sonos mobile dla albumu uruchomionego z aplikacji albo rozpocząć kolejny przyrost od nowego PRD/decyzji produktowej.
+- Rozpocząć kolejny przyrost od nowego PRD/decyzji produktowej.
 
 ## Walidacja
 
 | Data | Zakres | Komenda / sposób | Wynik | Uwagi |
 |---|---|---|---|---|
+| 2026-05-31 | Wrap-up po finalizacji korekty toolbara | `git status --short --branch`; `git log -2 --oneline --decorate`; `git diff --check` | PASS | Gałąź `codex/wyszukiwanie` była zsynchronizowana z `origin/codex/wyszukiwanie` po commicie `b428dc8`; wrap-up dopisał tylko dokumentację README/STATUS. |
+| 2026-05-31 | Korekta wizualna toolbara biblioteki po Milestone 13 | `node --check src/sonos_album_controller/static/app.js`; `uv run python -m unittest tests.test_frontend_library tests.test_app_smoke`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; Browser smoke na fake backendzie `http://127.0.0.1:8134` | PASS | Toolbar tworzy jedną spójną powierzchnię, kontrolki mają 44px wysokości, `Bez artysty` ma zmniejszony font i nie ściska się w polu, brak poziomego overflow, a normalny stan `ok` nie pokazuje już dużego komunikatu `Ostatnie odświeżenie` pod paskiem. |
+| 2026-05-31 | Finalna walidacja Milestone 13 po ponownym self-review | `node --check src/sonos_album_controller/static/app.js`; `uv run python -m unittest tests.test_frontend_library tests.test_app_smoke`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; kontrola braku diffu backendu/zależności | PASS | 16 testów frontend/smoke i 78 testów pełnych PASS; backend, publiczne API, cache, `pyproject.toml` i `uv.lock` bez zmian. |
+| 2026-05-31 | Poprawki po self-review Milestone 13 | `node --check src/sonos_album_controller/static/app.js`; `uv run python -m unittest tests.test_frontend_library tests.test_app_smoke`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check` | PASS | Naprawiono zachowanie komunikatu `not_configured`/`error` po użyciu kontrolek biblioteki oraz jednoznaczny tekst i `aria-label` chipa cache. Browser wyrenderował stan początkowy bez IP, ale interaktywne wpisywanie nie zostało zaliczone z powodu błędu narzędzia. |
+| 2026-05-31 | Milestone 13 implementacja lokalna | `node --check src/sonos_album_controller/static/app.js`; `uv run python -m unittest tests.test_frontend_library tests.test_app_smoke`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; Browser smoke desktop 1280x720 i mobile 390x844 na tymczasowym `SONOS_CACHE_PATH` | PASS | 78 testów pełnych PASS; smoke potwierdził toolbar nad siatką, brak poziomego overflow, wyszukiwanie bez diakrytyków, sortowanie, filtr `bez artysty`, pusty stan, zachowanie ustawień po powrocie z albumu i po `Odśwież albumy`. |
 | 2026-05-30 | Push Milestone 12 | `git push -u origin HEAD` | PASS | Gałąź `codex/okładki` wypchnięta do `origin`; commit implementacyjny: `3ba78aa`. |
 | 2026-05-30 | Wrap-up po finalizacji Milestone 12 | `git status --short --branch`; `git log -3 --oneline --decorate` | PASS | Gałąź `codex/okładki` śledzi `origin/codex/okładki`; stan dokumentacji operacyjnej doprowadzony do zgodności po pushu. |
 | 2026-05-30 | Milestone 12 implementacja lokalna | `uv run python -m unittest tests.test_playback`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `uv run python -m py_compile src/sonos_album_controller/playback.py`; `git diff --check`; read-only smoke realnych Favorites dla `<ASSEMBLE24>` | PASS | 26 testów playbacku i 75 testów pełnych PASS; helper wzbogacił realne `resource_meta_data` o `albumArtURI` i URL okładki bez uruchamiania odtwarzania. Ręczny smoke w oficjalnej aplikacji Sonos mobile nie został wykonany. |
@@ -142,6 +149,9 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 | Data | Zakres | Wynik | Problemy krytyczne | Następna akcja |
 |---|---|---|---|---|
+| 2026-05-31 | Self-review korekty wizualnej toolbara biblioteki | PASS | brak | Finalizacja operacyjna, commit i push. |
+| 2026-05-31 | Self-review Milestone 13 po poprawkach | PASS | brak | Finalizacja operacyjna, commit i push. |
+| 2026-05-31 | Self-review Milestone 13 | P2/P3 | Kontrolki biblioteki nadpisywały komunikaty `not_configured`/`error`; chip cache miał niejednoznaczny tekst dla danych niepochodzących z cache | Poprawki wdrożone; wykonać ponowny self-review przed finalizacją. |
 | 2026-05-30 | Self-review Milestone 12 | PASS | brak | Finalizacja operacyjna, commit i push. |
 | 2026-05-22 | Self-check spójności `spec.md` i `ROADMAP.md` względem PRD | PASS | brak | Commit i push zmian dokumentacyjnych. |
 | 2026-05-22 | Self-review Milestone 0.5 | PASS | brak | Finalizacja operacyjna, commit i push. |
@@ -171,6 +181,9 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 
 | Data | Narzędzie / komenda | Kategoria | Objaw | Działanie naprawcze | Czy wpłynęło na kontekst |
 |---|---|---|---|---|---|
+| 2026-05-31 | Browser `locator.fill` / `locator.type` / `dom_cua.type` przy smoke poprawek Milestone 13 | UnexpectedEnvironment | Interaktywne wpisywanie w polu wyszukiwania nie działało, bo środowisko Browser zgłosiło brak wirtualnego schowka | Zatrzymano serwer smoke po odczycie renderu początkowego; poprawki zweryfikowano testami automatycznymi i statycznym kontraktem | nie |
+| 2026-05-31 | Browser `waitForLoadState({ state: "networkidle" })` przy smoke Milestone 13 | InvalidArguments | Powierzchnia Browser w tej sesji nie obsłużyła stanu `networkidle` | Powtórzono smoke z obsługiwanym stanem `load` i krótkim oczekiwaniem przed odczytem DOM | nie |
+| 2026-05-31 | Browser runtime przy smoke Milestone 13 | InvalidArguments | Utrzymywany runtime JS miał już zadeklarowaną nazwę zmiennej `viewport` | Powtórzono smoke w lokalnym bloku z unikalnymi nazwami zmiennych | nie |
 | 2026-05-22 | Browser `waitForLoadState({ state: "networkidle" })` | InvalidArguments | Powierzchnia narzędzia nie obsługuje stanu `networkidle` | Powtórzono walidację z obsługiwanym stanem `load` | nie |
 | 2026-05-22 | Browser / Node Playwright smoke UI | UnexpectedEnvironment | Narzędzie browser nie było dostępne w `tool_search`, a lokalny Node nie miał modułu `playwright` | Zastąpiono walidacją HTTP przez uruchomiony `uvicorn` i `curl` | nie |
 | 2026-05-22 | Browser `waitForSelector` / `waitForFunction` | InvalidArguments | Powierzchnia Browser nie obsługiwała tych metod oczekiwania | Użyto lokatorów Browser i krótkiego oczekiwania przed odczytem stanu UI | nie |
@@ -214,6 +227,8 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 | 2026-05-23 | Milestone 10 wybór piosenki z tracklisty | `src/`, `tests/`, `prd/002-wybor-piosenki-z-listy.md`, `spec.md`, `ROADMAP.md`, `STATUS.md`, `README.md` | 100% po self-review i mikro-korekcie UX equalizera | Implementacja endpointu przeskoku, logiki wyboru widocznego utworu i testów przeszła self-review bez problemów krytycznych; późniejsza uwaga manualna dodała tylko statyczny wskaźnik grania w istniejącym froncie. |
 | 2026-05-23 | Milestone 11 artyści albumów z Apple Lookup | `src/`, `tests/`, `prd/003-artysci-albumow.md`, `spec.md`, `ROADMAP.md`, `STATUS.md`, `README.md` | 100% po poprawkach self-review | Implementacja wzbogacania artystów, cache i ukrywania fallbacku UI przetrwała ponowny review; poprawki ograniczyły się do budżetu czasu lookupów, circuit breakera i realnego smoke Sonos bez poszerzania zakresu. |
 | 2026-05-30 | Milestone 12 okładki w Ostatnio odtwarzanych Sonos | `src/`, `tests/`, `prd/004-okladki-w-ostatnio-odtworzonych.md`, `spec.md`, `ROADMAP.md`, `STATUS.md` | 100% po self-review, bez poprawek krytycznych | Minimalne wzbogacenie DIDL-Lite metadata, testy payloadu i dokumentacja przeszły review bez zmian; ręczny smoke oficjalnej aplikacji Sonos pozostaje opcjonalną walidacją integracyjną. |
+| 2026-05-31 | Milestone 13 wyszukiwanie i sortowanie albumów | `src/sonos_album_controller/static/`, `tests/`, `prd/005-wyszukiwanie-sortowanie-albumow.md`, `spec.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review | Implementacja pozostała frontend-only, bez nowych zależności i bez zmian API/cache; poprawki ograniczyły się do stanów `not_configured`/`error` i jednoznacznego chipa cache. |
+| 2026-05-31 | Korekta wizualna toolbara biblioteki | `src/sonos_album_controller/static/`, `tests/test_app_smoke.py`, `STATUS.md` | 100% po self-review | Korekta pozostała CSS/HTML-only poza ukryciem duplikatu komunikatu `Ostatnie odświeżenie`; dodatkowa mikrokorekta zmniejszyła font `Bez artysty` bez zmiany logiki i API. |
 
 ## Blokery i ryzyka
 
@@ -225,13 +240,14 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - Próba bezpośredniego `speaker.add_to_queue(album_favorite)` dla realnego albumu `[VirtuouS] - EP` zwróciła UPnP 800, ale fallback `AddURIToQueue(album.uri, resource_meta_data)` działa i po załadowaniu pozwala odczytać utwory z kolejki Sonosa.
 - Milestone 8 zachowuje ograniczenie jakości audio z PoC: brak wiarygodnych danych oznacza neutralne `Jakosc niedostepna`; ewentualne prawdziwe badge wymagają osobno potwierdzonego pola z Sonos/SoCo/metadanych.
 - Milestone 12 przekazuje `albumArtURI` w metadatach kolejki, ale finalne wyświetlenie okładki w `Ostatnio odtwarzane` zależy od oficjalnej aplikacji Sonos i wymaga ręcznej weryfikacji po uruchomieniu albumu.
+- Milestone 13 był walidowany na kontrolowanym tymczasowym cache bez realnego Sonosa, zgodnie z zakresem frontend-only; ryzyko integracyjne dotyczy głównie wyglądu na realnie dużych bibliotekach i może zostać ocenione późniejszym smoke na danych użytkownika.
 
 ## Handoff do następnej sesji
 
-- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, Milestone 5 ma zakończony widok albumu i player bez odtwarzania, Milestone 6 ma zakończony playback z fallbackiem `AddURIToQueue` i odczytem tracklisty z kolejki Sonosa po starcie albumu, Milestone 7 ma zakończone tryby pętli i lokalny pasek postępu po pozytywnym self-review, Milestone 8 ma zakończony neutralny badge jakości audio, nietechniczne błędy/logi i ciemne polerowanie UI MVP po pozytywnym self-review, Milestone 9 ma zakończony premium music-first frontend, Milestone 10 ma zakończony wybór widocznej piosenki z tracklisty i wskaźnik grania aktywnego utworu, Milestone 11 ma zakończone wzbogacanie artystów albumów przez Apple/iTunes lookup, a Milestone 12 ma zakończone wzbogacanie metadata `AddURIToQueue` o `albumArtURI`.
+- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, Milestone 5 ma zakończony widok albumu i player bez odtwarzania, Milestone 6 ma zakończony playback z fallbackiem `AddURIToQueue` i odczytem tracklisty z kolejki Sonosa po starcie albumu, Milestone 7 ma zakończone tryby pętli i lokalny pasek postępu po pozytywnym self-review, Milestone 8 ma zakończony neutralny badge jakości audio, nietechniczne błędy/logi i ciemne polerowanie UI MVP po pozytywnym self-review, Milestone 9 ma zakończony premium music-first frontend, Milestone 10 ma zakończony wybór widocznej piosenki z tracklisty i wskaźnik grania aktywnego utworu, Milestone 11 ma zakończone wzbogacanie artystów albumów przez Apple/iTunes lookup, Milestone 12 ma zakończone wzbogacanie metadata `AddURIToQueue` o `albumArtURI`, a Milestone 13 ma zakończone lokalne wyszukiwanie/sortowanie/filtrowanie biblioteki oraz finalnie wypolerowany toolbar wyszukiwania po uwadze wizualnej.
 - Decyzje, których nie wolno zgubić: FastAPI + SoCo, statyczny frontend HTML/CSS/vanilla JS, jeden Sonos Era 300 po stałym IP z `SONOS_SPEAKER_IP`, cache albumów w `~/.sonos-album-controller/cache/albums.json` albo `SONOS_CACHE_PATH`, jakość audio best effort, testy automatyczne bez realnego Sonosa.
-- Pliki, które warto doczytać jako pierwsze: `AGENTS.md`, `STATUS.md`, `spec.md`, `ROADMAP.md`, `src/sonos_album_controller/app_logging.py`, `src/sonos_album_controller/playback.py`, `src/sonos_album_controller/albums.py`, `src/sonos_album_controller/static/app.js`, `src/sonos_album_controller/static/styles.css`, `tests/test_playback.py`, `tests/test_app_smoke.py`.
-- Następny bezpieczny krok: opcjonalny ręczny smoke w aplikacji Sonos mobile albo kolejny przyrost od nowego PRD/decyzji produktowej.
+- Pliki, które warto doczytać jako pierwsze: `AGENTS.md`, `STATUS.md`, `spec.md`, `ROADMAP.md`, `prd/005-wyszukiwanie-sortowanie-albumow.md`, `src/sonos_album_controller/static/index.html`, `src/sonos_album_controller/static/app.js`, `src/sonos_album_controller/static/styles.css`, `tests/test_frontend_library.py`, `tests/test_app_smoke.py`.
+- Następny bezpieczny krok: rozpocząć kolejny przyrost od nowego PRD albo decyzji produktowej.
 - Czego nie robić: nie zaczynać pełnej integracji z Sonosem przed PoC z Milestone 1; nie dodawać zależności frontendowych bez potrzeby.
 
 ## Ostatnie aktualizacje
@@ -286,3 +302,9 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-23: Sfinalizowano Milestone 11 commitem `c982ff4` i pushem gałęzi `codex/artysta` do `origin`; wrap-up potwierdził spójny handoff.
 - 2026-05-30: Dodano `prd/004-okladki-w-ostatnio-odtworzonych.md`, rozszerzono `spec.md` i `ROADMAP.md` o Milestone 12 oraz zaimplementowano wzbogacanie `EnqueuedURIMetaData` o `albumArtURI`; testy automatyczne, read-only smoke realnych Favorites i self-review przeszły bez problemów krytycznych.
 - 2026-05-30: Sfinalizowano Milestone 12 commitem `3ba78aa` i pushem gałęzi `codex/okładki` do `origin`; wrap-up doprowadził `STATUS.md` do stanu po pushu.
+- 2026-05-31: Dodano `prd/005-wyszukiwanie-sortowanie-albumow.md`, rozszerzono `spec.md` i `ROADMAP.md` o Milestone 13 dotyczący lokalnego wyszukiwania, sortowania i filtrów biblioteki albumów.
+- 2026-05-31: Zaimplementowano Milestone 13 lokalnie: pasek narzędzi biblioteki, wyszukiwanie po tytule/artyście bez diakrytyków, sortowanie, filtr `bez artysty`, chipy statusu, liczniki i pusty stan; walidacje automatyczne oraz Browser smoke desktop/mobile przeszły, milestone wymaga self-review.
+- 2026-05-31: Po self-review Milestone 13 poprawiono zachowanie komunikatów `not_configured`/`error` po użyciu kontrolek biblioteki oraz jednoznaczność chipa cache; walidacje automatyczne przeszły, milestone wymaga ponownego self-review.
+- 2026-05-31: Ponowny self-review Milestone 13 zakończył się bez problemów krytycznych; finalne walidacje przeszły, a dokumentacja operacyjna została domknięta.
+- 2026-05-31: Ujednolicono wizualnie toolbar wyszukiwania/sortowania albumów jako jedną powierzchnię z równymi kontrolkami, bez widocznych labelek i bez dużego komunikatu `Ostatnie odświeżenie` przy normalnym stanie danych; po uwadze wizualnej zmniejszono font przycisku `Bez artysty`, żeby tekst mieścił się w polu.
+- 2026-05-31: Sfinalizowano korektę wizualną toolbara commitem `b428dc8` i pushem gałęzi `codex/wyszukiwanie` do `origin`; wrap-up dopisał opis kontrolek biblioteki do README i zaktualizował handoff.

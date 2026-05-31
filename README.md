@@ -45,6 +45,8 @@ Endpointy:
 - `GET /api/diagnostics` - zwraca skonfigurowane IP, status połączenia, ostatni błąd i stan cache.
 - `POST /api/diagnostics/test-connection` - wykonuje test połączenia z Sonosem.
 
+Frontend biblioteki działa lokalnie na aktualnej odpowiedzi `/api/albums`: pozwala wyszukiwać albumy po tytule i artyście bez uwzględniania wielkości liter i znaków diakrytycznych, sortować po kolejności z API/Sonosa, tytule albo artyście, zawężać listę filtrem `bez artysty` oraz pokazuje chipy statusu cache i ostatniego odświeżenia. Stan tych kontrolek trwa tylko w bieżącej sesji strony i nie jest zapisywany w URL ani `localStorage`.
+
 Ograniczenie realnej integracji: dla aktualnych Apple Music Favorites testowanych na Sonos Era 300 metoda SoCo `MusicLibrary.browse` zwraca 0 utworów. Aplikacja ma fallback odtworzenia całego albumu przez `AddURIToQueue` z albumowym URI i metadanymi Favorites; po załadowaniu albumu odczytuje tytuły i czasy utworów z kolejki Sonosa.
 
 Nazwy artystów albumów Apple Music są uzupełniane best effort przez publiczny Apple/iTunes lookup po identyfikatorze albumu znalezionym w metadanych Sonosa. Brak sieci albo brak wyniku lookupu nie blokuje albumów ani odtwarzania; dla takich albumów UI pomija linię artysty zamiast pokazywać tekst zastępczy.
