@@ -11,6 +11,7 @@ from sonos_album_controller.albums import albums_report_to_dict
 from sonos_album_controller.config import load_config
 from sonos_album_controller.diagnostics import build_diagnostics, diagnostics_to_dict, test_sonos_connection
 from sonos_album_controller.playback import (
+    get_playback_state,
     playback_report_to_dict,
     select_queue_track,
     set_muted,
@@ -114,6 +115,12 @@ def start_playback(request: StartPlaybackRequest) -> dict[str, object]:
 @app.post("/api/playback/state")
 def update_playback_state(request: PlaybackStateRequest) -> dict[str, object]:
     report = set_playback_playing(load_config(), request.is_playing)
+    return playback_report_to_dict(report)
+
+
+@app.get("/api/playback/state")
+def read_playback_state() -> dict[str, object]:
+    report = get_playback_state(load_config())
     return playback_report_to_dict(report)
 
 

@@ -123,6 +123,73 @@ console.log(JSON.stringify({{
         self.assertTrue(result["cachedBySource"])
         self.assertFalse(result["fresh"])
 
+    def test_playback_sync_delay_and_local_action_guard(self) -> None:
+        source = f"""
+const app = require({json.dumps(str(APP_JS))});
+console.log(JSON.stringify({{
+  playingDelay: app.getPlaybackSyncDelay({{ isPlaying: true }}, 0),
+  pausedDelay: app.getPlaybackSyncDelay({{ isPlaying: false }}, 0),
+  firstBackoff: app.getPlaybackSyncDelay({{ isPlaying: true }}, 1),
+  cappedBackoff: app.getPlaybackSyncDelay({{ isPlaying: true }}, 9),
+  protectedAction: app.shouldProtectLocalAction(2000, 1100),
+  expiredAction: app.shouldProtectLocalAction(2401, 1100),
+  scheduleVisible: app.shouldSchedulePlaybackSync(false),
+  scheduleHidden: app.shouldSchedulePlaybackSync(true),
+  runVisibleIdle: app.shouldRunPlaybackSync(false, false),
+  runHidden: app.shouldRunPlaybackSync(true, false),
+  runInFlight: app.shouldRunPlaybackSync(false, true),
+}}));
+"""
+        result = self.run_node(source)
+
+        self.assertEqual(result["playingDelay"], 3000)
+        self.assertEqual(result["pausedDelay"], 10000)
+        self.assertEqual(result["firstBackoff"], 10000)
+        self.assertEqual(result["cappedBackoff"], 30000)
+        self.assertTrue(result["protectedAction"])
+        self.assertFalse(result["expiredAction"])
+        self.assertTrue(result["scheduleVisible"])
+        self.assertFalse(result["scheduleHidden"])
+        self.assertTrue(result["runVisibleIdle"])
+        self.assertFalse(result["runHidden"])
+        self.assertFalse(result["runInFlight"])
+
+    def test_playback_sync_matches_tracks_conservatively(self) -> None:
+        source = f"""
+const app = require({json.dumps(str(APP_JS))});
+const tracks = [
+  {{ title: "Opening", uri: "track:1" }},
+  {{ title: "Second", uri: "track:2" }},
+  {{ title: "Second", uri: "track:2-alt" }},
+];
+console.log(JSON.stringify({{
+  indexAndUri: app.findSyncedTrackIndexForTracks(tracks, {{
+    track_index: 1,
+    track: {{ title: "Second", uri: "track:2" }},
+  }}),
+  uniqueUri: app.findSyncedTrackIndexForTracks(tracks, {{
+    track: {{ title: "Whatever", uri: "track:1" }},
+  }}),
+  duplicateTitle: app.findSyncedTrackIndexForTracks(tracks, {{
+    track: {{ title: "Second" }},
+  }}),
+  mismatchedIndex: app.findSyncedTrackIndexForTracks(tracks, {{
+    track_index: 2,
+    track: {{ title: "Opening", uri: "track:1" }},
+  }}),
+  unknown: app.findSyncedTrackIndexForTracks(tracks, {{
+    track: {{ title: "External", uri: "track:x" }},
+  }}),
+}}));
+"""
+        result = self.run_node(source)
+
+        self.assertEqual(result["indexAndUri"], 1)
+        self.assertEqual(result["uniqueUri"], 0)
+        self.assertIsNone(result["duplicateTitle"])
+        self.assertIsNone(result["mismatchedIndex"])
+        self.assertIsNone(result["unknown"])
+
 
 if __name__ == "__main__":
     unittest.main()

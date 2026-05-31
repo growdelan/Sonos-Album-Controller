@@ -711,3 +711,75 @@ Uwagi:
 - zakres ocenia się jako mały: zmiana jest lokalna dla istniejącego frontendu biblioteki albumów i nie wymaga nowych zależności, backendu ani realnego Sonosa
 - status `z cache` i `ostatnio odświeżone` dotyczy całej listy albumów, nie pojedynczych albumów
 - milestone zakończony po poprawkach self-review i pozytywnym ponownym self-review; automatyczna walidacja, statyczny kontrakt frontendu oraz wcześniejszy Browser smoke desktop/mobile potwierdziły zakres bez zmian API, backendu, cache i zależności
+
+---
+
+## Milestone 14: Lepsza synchronizacja stanu Sonosa (done)
+
+Cel:
+- dodać read-only endpoint `GET /api/playback/state` zwracający podstawowy snapshot stanu Sonosa
+- uruchomić adaptacyjny polling frontendu, żeby player zauważał zmiany wykonane poza aplikacją
+- zsynchronizować play/pause, aktualny utwór, pozycję, tryb pętli best effort, głośność i mute bez odświeżania biblioteki albumów
+- usunąć ograniczenie braku aktywnej synchronizacji zmian zewnętrznych, zachowując lekki lokalny charakter aplikacji
+
+Definition of Done:
+- istnieje `GET /api/playback/state`, a istniejący `POST /api/playback/state` nadal pozostaje komendą play/pause
+- endpoint zwraca kontrolowane `not_configured` bez `SONOS_SPEAKER_IP` oraz nietechniczny błąd przy problemie połączenia
+- endpoint potrafi zwrócić play/pause, volume, mute, repeat mode best effort, aktualny utwór/metadane i pozycję utworu, jeśli SoCo udostępnia te dane
+- odczyt stanu nie czyści kolejki, nie zmienia odtwarzania, nie odświeża albumów i nie zapisuje cache
+- frontend odpytuje stan co 3 sekundy podczas odtwarzania oraz co 10 sekund przy pauzie, braku aktywnego odtwarzania albo nierozpoznanym stanie
+- polling zatrzymuje się przy ukrytej karcie i wykonuje natychmiastowy odczyt po powrocie karty do widoczności
+- zewnętrzna pauza, wznowienie, zmiana głośności, mute/unmute i zmiana utworu aktualizują player bez odświeżania strony
+- tryb pętli zmieniony poza aplikacją aktualizuje przycisk pętli, jeśli SoCo zwraca wiarygodny stan
+- znany, pewnie dopasowany utwór aktualizuje aktywny wiersz tracklisty
+- nierozpoznany zewnętrzny utwór pokazuje się neutralnie w playerze i nie podświetla błędnego wiersza tracklisty
+- pasek postępu nadal animuje lokalnie między odczytami, ale polling koryguje pauzę, zmianę utworu i większe rozjazdy pozycji
+- świeża lokalna akcja użytkownika nie jest natychmiast cofana przez opóźniony wynik pollingu
+- chwilowe błędy pollingu nie czyszczą playera ani tracklisty; po serii błędów UI pokazuje subtelny status problemu synchronizacji
+- UI nie wykonuje automatycznej nawigacji do innego albumu i polling nie wywołuje `/api/albums`, `/api/albums/refresh` ani pobierania Favorites
+- funkcja przechodzi testy automatyczne bez realnego Sonosa oraz wymagany manualny smoke z realnym Sonos Era 300
+
+Zakres:
+- backendowy read-only snapshot stanu playbacku
+- normalizacja podstawowych danych SoCo o transporcie, aktualnym utworze, pozycji, głośności, mute i trybie pętli
+- zachowanie kompatybilności istniejących endpointów komend playbacku
+- frontendowy mechanizm adaptacyjnego pollingu z obsługą widoczności karty
+- konserwatywne dopasowanie aktualnego utworu do znanej tracklisty
+- neutralny stan playera dla nierozpoznanego zewnętrznego odtwarzania
+- subtelny status synchronizacji i obsługa cichych błędów pollingu
+- testy backendu, testy statyczne/regresyjne frontendu i manualny smoke z realnym Sonosem
+
+Poza zakresem:
+- WebSocket, SSE albo stałe połączenie push
+- nowe zależności frontendowe lub backendowe
+- obsługa wielu głośników albo automatyczne wykrywanie głośników
+- automatyczna nawigacja do albumu wykrytego z zewnętrznego odtwarzania
+- odświeżanie `/api/albums`, cache albumów albo Sonos Favorites w ramach pollingu
+- backendowe dopasowywanie dowolnej zewnętrznej kolejki do biblioteki albumów
+- obsługa playlist, radia albo pojedynczych utworów jako nowych źródeł
+- seekowanie po czasie utworu
+- zmiana sposobu startu albumu, fallbacku `AddURIToQueue`, kolejki albo wyboru utworu
+
+Walidacja:
+- `uv run python -m unittest discover -s tests -p "test_*.py"`
+- `node --check src/sonos_album_controller/static/app.js`
+- `git diff --check`
+- test backendu `GET /api/playback/state` dla braku IP, błędu połączenia, play/pause, volume, mute, repeat mode, aktualnego utworu i pozycji
+- test potwierdzający, że read-only endpoint nie wykonuje komend kolejki, odtwarzania, odświeżania albumów ani zapisu cache
+- test frontendu dla interwałów 3s/10s, zatrzymania pollingu przy ukrytej karcie i odczytu po powrocie
+- test frontendu dla korekty play/pause, volume, mute, pętli, postępu i aktywnego utworu
+- test frontendu dla neutralnego stanu nierozpoznanego utworu i braku fałszywego podświetlenia tracklisty
+- test frontendu dla ochrony świeżej lokalnej akcji przed opóźnionym pollingiem oraz dla cichego błędu pollingu z backoffem
+- Browser smoke na fake backendzie: start pollingu, aktualizacje playera, ukrycie/powrót karty, brak automatycznej nawigacji i brak poziomego overflow
+- wymagany manualny smoke z realnym `SONOS_SPEAKER_IP`: pauza, wznowienie, volume, mute, następny utwór i pętla wykonane poza aplikacją pojawiają się w UI w granicach interwału pollingu
+
+Kontrakt sprintu:
+- wymagany przed implementacją: tak
+- najważniejsze walidacje: testy read-only snapshotu, testy pollingu frontendu, Browser smoke oraz manualny smoke z realnym Sonos Era 300
+- stop conditions: brak stabilnego odczytu transportu/pozycji przez SoCo, brak możliwości odróżnienia read-only snapshotu od komend mutujących, konieczność odświeżania Favorites albo cache w celu spełnienia wymagań, albo brak dostępu do realnego Sonosa dla wymaganej walidacji końcowej
+
+Uwagi:
+- milestone wynika z `prd/006-lepsza-synchronizacja-stanu-sonosa.md`
+- zakres ocenia się jako średni: zmiana dotyka backendowego playbacku, statycznego frontendu i realnej integracji z Sonosem, ale nie dodaje zależności, nie zmienia cache i nie przebudowuje biblioteki albumów
+- milestone zastępuje wcześniejsze ograniczenie braku aktywnej synchronizacji zmian zewnętrznych ograniczonym, read-only pollingiem playera
+- milestone zakończony po poprawkach self-review, końcowym pozytywnym self-review, automatycznej walidacji oraz ręcznym smoke na realnym Sonos Era 300

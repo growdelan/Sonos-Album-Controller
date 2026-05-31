@@ -36,6 +36,7 @@ Endpointy:
 - `GET /api/albums/{album_id}` - zwraca szczegóły albumu, listę utworów jeśli SoCo potrafi ją rozwinąć oraz czytelny komunikat, gdy lista utworów jest niedostępna.
 - `POST /api/playback/start` - czyści kolejkę, ładuje cały album i startuje od wybranego indeksu utworu; gdy Sonos nie zwraca listy utworów, uruchamia cały album przez albumowe URI i metadane z Favorites, a następnie odczytuje listę utworów z kolejki Sonosa.
 - `POST /api/playback/select` - przeskakuje do wskazanego indeksu w aktualnie załadowanej kolejce albumu bez ponownego czyszczenia i ładowania albumu.
+- `GET /api/playback/state` - read-only snapshot aktualnego stanu Sonosa: play/pause, utwór, pozycja, głośność, mute i tryb pętli best effort.
 - `POST /api/playback/state` - wznawia albo pauzuje odtwarzanie.
 - `POST /api/playback/next` - przechodzi do następnego utworu i respektuje tryb pętli przekazany przez UI.
 - `POST /api/playback/previous` - obsługuje poprzedni utwór z regułą 10 sekund i pętlą albumu.
@@ -46,6 +47,8 @@ Endpointy:
 - `POST /api/diagnostics/test-connection` - wykonuje test połączenia z Sonosem.
 
 Frontend biblioteki działa lokalnie na aktualnej odpowiedzi `/api/albums`: pozwala wyszukiwać albumy po tytule i artyście bez uwzględniania wielkości liter i znaków diakrytycznych, sortować po kolejności z API/Sonosa, tytule albo artyście, zawężać listę filtrem `bez artysty` oraz pokazuje chipy statusu cache i ostatniego odświeżenia. Stan tych kontrolek trwa tylko w bieżącej sesji strony i nie jest zapisywany w URL ani `localStorage`.
+
+Player okresowo odpytuje `GET /api/playback/state`, żeby zauważać zmiany wykonane poza aplikacją, np. pauzę, zmianę głośności, mute, tryb pętli albo utwór. Polling zatrzymuje się przy ukrytej karcie, nie odświeża biblioteki albumów ani cache i konserwatywnie podświetla tracklistę tylko przy pewnym dopasowaniu.
 
 Ograniczenie realnej integracji: dla aktualnych Apple Music Favorites testowanych na Sonos Era 300 metoda SoCo `MusicLibrary.browse` zwraca 0 utworów. Aplikacja ma fallback odtworzenia całego albumu przez `AddURIToQueue` z albumowym URI i metadanymi Favorites; po załadowaniu albumu odczytuje tytuły i czasy utworów z kolejki Sonosa.
 

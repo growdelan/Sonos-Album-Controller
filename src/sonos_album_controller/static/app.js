@@ -3,12 +3,24 @@ const playerState = {
     tracks: [],
     loadedQueueAlbumId: null,
     currentTrackIndex: null,
+    externalTrack: null,
+    externalDurationSeconds: 0,
     isPlaying: false,
     lastActionStartedAt: null,
+    lastLocalActionAt: null,
     repeatMode: "none",
     elapsedBeforePlay: 0,
     progressTimer: null,
+    syncTimer: null,
+    syncErrorCount: 0,
+    syncRequestInFlight: false,
 };
+
+const PLAYBACK_SYNC_ACTIVE_MS = 3000;
+const PLAYBACK_SYNC_IDLE_MS = 10000;
+const PLAYBACK_SYNC_MAX_BACKOFF_MS = 30000;
+const PLAYBACK_SYNC_PROBLEM_ERRORS = 3;
+const LOCAL_ACTION_PROTECTION_MS = 1200;
 
 const libraryState = {
     report: null,
@@ -71,9 +83,7 @@ function scrollToTop() {
 }
 
 function resetPreparedVolumeControls() {
-    const muteButton = document.querySelector("#mute-control-button");
-    muteButton.setAttribute("aria-pressed", "false");
-    muteButton.textContent = "Mute";
+    setMuteControl(false);
 }
 
 function setPanelMessage(target, message, state = "default") {
@@ -87,6 +97,34 @@ function setPlaybackButtonsEnabled(enabled) {
     document.querySelector("#play-pause-control-button").disabled = !enabled;
     document.querySelector("#next-control-button").disabled = !enabled;
     document.querySelector("#repeat-control-button").disabled = !enabled;
+}
+
+function setPlaybackSyncStatus(message, state = "default") {
+    const target = document.querySelector("#player-sync-status");
+    if (!target) {
+        return;
+    }
+    target.textContent = message;
+    target.classList.toggle("sync-warning", state === "warning");
+    target.classList.toggle("sync-changed", state === "changed");
+    target.classList.toggle("sync-pending", state === "pending");
+}
+
+function setVolumeControl(volume) {
+    if (!Number.isInteger(volume) || volume < 0 || volume > 100) {
+        return;
+    }
+    document.querySelector("#volume-control").value = String(volume);
+    document.querySelector("#volume-value").textContent = `${volume}%`;
+}
+
+function setMuteControl(muted) {
+    if (typeof muted !== "boolean") {
+        return;
+    }
+    const muteButton = document.querySelector("#mute-control-button");
+    muteButton.setAttribute("aria-pressed", String(muted));
+    muteButton.textContent = muted ? "Unmute" : "Mute";
 }
 
 function updatePlayPauseButton() {
@@ -144,12 +182,21 @@ function formatDuration(seconds) {
 }
 
 function currentTrackDurationSeconds() {
+    if (playerState.currentTrackIndex === null && playerState.externalTrack) {
+        return playerState.externalDurationSeconds || parseDurationSeconds(playerState.externalTrack.duration);
+    }
     const track = playerState.tracks[playerState.currentTrackIndex];
     return track ? parseDurationSeconds(track.duration) : 0;
 }
 
 function currentElapsedSeconds() {
     if (playerState.currentTrackIndex === null) {
+        if (playerState.externalTrack) {
+            if (!playerState.isPlaying || !playerState.lastActionStartedAt) {
+                return playerState.elapsedBeforePlay;
+            }
+            return playerState.elapsedBeforePlay + Math.floor((Date.now() - playerState.lastActionStartedAt) / 1000);
+        }
         return 0;
     }
     if (!playerState.isPlaying || !playerState.lastActionStartedAt) {
@@ -204,7 +251,7 @@ function stopProgressTimer() {
 
 function startProgressTimer() {
     stopProgressTimer();
-    if (!playerState.isPlaying || playerState.currentTrackIndex === null) {
+    if (!playerState.isPlaying || (playerState.currentTrackIndex === null && !playerState.externalTrack)) {
         updateProgressDisplay();
         return;
     }
@@ -217,6 +264,10 @@ function handleProgressTick() {
     const elapsed = currentElapsedSeconds();
     if (duration <= 0 || elapsed < duration) {
         updateProgressDisplay();
+        return;
+    }
+    if (playerState.currentTrackIndex === null) {
+        updateProgressDisplay(duration);
         return;
     }
     advanceAfterTrackEnd();
@@ -316,11 +367,17 @@ function setTrackPending(trackIndex, pending) {
     });
 }
 
+function clearExternalTrackState() {
+    playerState.externalTrack = null;
+    playerState.externalDurationSeconds = 0;
+}
+
 function setCurrentTrack(trackIndex, isPlaying, elapsedSeconds = 0) {
     const track = playerState.tracks[trackIndex];
     if (!track) {
         return;
     }
+    clearExternalTrackState();
     playerState.currentTrackIndex = trackIndex;
     playerState.isPlaying = isPlaying;
     playerState.elapsedBeforePlay = elapsedSeconds;
@@ -335,6 +392,7 @@ function setCurrentTrack(trackIndex, isPlaying, elapsedSeconds = 0) {
 }
 
 function setWholeAlbumPlayback(album, trackIndex, isPlaying) {
+    clearExternalTrackState();
     playerState.album = album;
     playerState.currentTrackIndex = Number.isInteger(trackIndex) ? trackIndex : 0;
     playerState.isPlaying = isPlaying;
@@ -360,6 +418,7 @@ function applyReportTracks(report) {
 }
 
 function resetPlayerState() {
+    clearExternalTrackState();
     playerState.currentTrackIndex = null;
     playerState.loadedQueueAlbumId = null;
     playerState.isPlaying = false;
@@ -375,6 +434,289 @@ function resetPlayerState() {
     updatePlayerContext();
     updateActiveTrack();
     updateProgressDisplay(0);
+}
+
+function normalizedTrackValue(value) {
+    return typeof value === "string" ? value.trim() : "";
+}
+
+function numberOrNull(value) {
+    return Number.isFinite(value) ? value : null;
+}
+
+function trackMatchesSynced(localTrack, syncedTrack) {
+    if (!localTrack || !syncedTrack) {
+        return false;
+    }
+    const localUri = normalizedTrackValue(localTrack.uri);
+    const syncedUri = normalizedTrackValue(syncedTrack.uri);
+    if (localUri && syncedUri) {
+        return localUri === syncedUri;
+    }
+    const localTitle = normalizedTrackValue(localTrack.title);
+    const syncedTitle = normalizedTrackValue(syncedTrack.title);
+    return Boolean(localTitle && syncedTitle && localTitle === syncedTitle);
+}
+
+function findUniqueTrackIndex(tracks, predicate) {
+    const matches = [];
+    tracks.forEach((track, index) => {
+        if (predicate(track)) {
+            matches.push(index);
+        }
+    });
+    return matches.length === 1 ? matches[0] : null;
+}
+
+function findSyncedTrackIndexForTracks(tracks, state) {
+    const syncedTrack = state && state.track;
+    if (!Array.isArray(tracks) || tracks.length === 0 || !syncedTrack) {
+        return null;
+    }
+    const requestedIndex = Number.isInteger(state.track_index) ? state.track_index : null;
+    if (requestedIndex !== null && requestedIndex >= 0 && requestedIndex < tracks.length) {
+        return trackMatchesSynced(tracks[requestedIndex], syncedTrack) ? requestedIndex : null;
+    }
+
+    const syncedUri = normalizedTrackValue(syncedTrack.uri);
+    if (syncedUri) {
+        return findUniqueTrackIndex(tracks, (track) => normalizedTrackValue(track.uri) === syncedUri);
+    }
+
+    const syncedTitle = normalizedTrackValue(syncedTrack.title);
+    if (!syncedTitle) {
+        return null;
+    }
+    return findUniqueTrackIndex(tracks, (track) => normalizedTrackValue(track.title) === syncedTitle);
+}
+
+function getPlaybackSyncDelay(state = playerState, errorCount = playerState.syncErrorCount) {
+    if (errorCount > 0) {
+        return Math.min(PLAYBACK_SYNC_MAX_BACKOFF_MS, PLAYBACK_SYNC_IDLE_MS * errorCount);
+    }
+    return state && state.isPlaying ? PLAYBACK_SYNC_ACTIVE_MS : PLAYBACK_SYNC_IDLE_MS;
+}
+
+function shouldProtectLocalAction(now = Date.now(), lastLocalActionAt = playerState.lastLocalActionAt) {
+    return Number.isFinite(lastLocalActionAt) && now - lastLocalActionAt < LOCAL_ACTION_PROTECTION_MS;
+}
+
+function shouldSchedulePlaybackSync(documentHidden) {
+    return !documentHidden;
+}
+
+function shouldRunPlaybackSync(documentHidden, requestInFlight) {
+    return !documentHidden && !requestInFlight;
+}
+
+function markLocalPlaybackAction() {
+    playerState.lastLocalActionAt = Date.now();
+    setPlaybackSyncStatus("Synchronizacja...", "pending");
+}
+
+function applySyncedControls(state) {
+    if (!state) {
+        return;
+    }
+    setVolumeControl(state.volume);
+    setMuteControl(state.muted);
+    if (["none", "album", "track"].includes(state.repeat_mode)) {
+        playerState.repeatMode = state.repeat_mode;
+        updateRepeatButton();
+    }
+}
+
+function playerDiffersFromSyncedState(state) {
+    if (!state) {
+        return false;
+    }
+    if (typeof state.is_playing === "boolean" && playerState.isPlaying !== state.is_playing) {
+        return true;
+    }
+    if (["none", "album", "track"].includes(state.repeat_mode) && playerState.repeatMode !== state.repeat_mode) {
+        return true;
+    }
+    if (Number.isInteger(state.volume) && Number(document.querySelector("#volume-control").value) !== state.volume) {
+        return true;
+    }
+    if (typeof state.muted === "boolean") {
+        const muted = document.querySelector("#mute-control-button").getAttribute("aria-pressed") === "true";
+        if (muted !== state.muted) {
+            return true;
+        }
+    }
+    if (!state.track) {
+        return false;
+    }
+    const syncedIndex = findSyncedTrackIndexForTracks(playerState.tracks, state);
+    if (syncedIndex !== null) {
+        return playerState.currentTrackIndex !== syncedIndex || Boolean(playerState.externalTrack);
+    }
+    return !playerState.externalTrack || !trackMatchesSynced(playerState.externalTrack, state.track);
+}
+
+function syncedPositionSeconds(state) {
+    return numberOrNull(state && state.position_seconds);
+}
+
+function syncedDurationSeconds(state) {
+    return numberOrNull(state && state.duration_seconds);
+}
+
+function applyKnownSyncedTrack(state, trackIndex) {
+    const nextPlaying = Boolean(state.is_playing);
+    const nextElapsed = syncedPositionSeconds(state);
+    const currentElapsed = currentElapsedSeconds();
+    const elapsed = nextElapsed === null ? currentElapsed : nextElapsed;
+    const sameTrack = playerState.currentTrackIndex === trackIndex && !playerState.externalTrack;
+    const samePlayback = playerState.isPlaying === nextPlaying;
+    const drift = Math.abs(currentElapsed - elapsed);
+
+    if (sameTrack && samePlayback && drift <= 2) {
+        return;
+    }
+    if (sameTrack && samePlayback) {
+        playerState.elapsedBeforePlay = elapsed;
+        playerState.lastActionStartedAt = nextPlaying ? Date.now() : null;
+        startProgressTimer();
+        return;
+    }
+    setCurrentTrack(trackIndex, nextPlaying, elapsed);
+}
+
+function applyExternalSyncedTrack(state) {
+    const track = state.track;
+    const nextPlaying = Boolean(state.is_playing);
+    const nextElapsed = syncedPositionSeconds(state) || 0;
+    const nextDuration = syncedDurationSeconds(state) || parseDurationSeconds(track.duration);
+    const sameTrack = playerState.currentTrackIndex === null
+        && playerState.externalTrack
+        && trackMatchesSynced(playerState.externalTrack, track);
+    const samePlayback = playerState.isPlaying === nextPlaying;
+    const drift = Math.abs(currentElapsedSeconds() - nextElapsed);
+
+    playerState.currentTrackIndex = null;
+    playerState.externalTrack = track;
+    playerState.externalDurationSeconds = nextDuration;
+    playerState.isPlaying = nextPlaying;
+    playerState.elapsedBeforePlay = nextElapsed;
+    playerState.lastActionStartedAt = nextPlaying ? Date.now() : null;
+    setPlaybackButtonsEnabled(false);
+    updatePlayPauseButton();
+    updatePlayerArtwork(playerState.album);
+    setMarqueeText(document.querySelector("#player-context"), "Utwor spoza aktualnej tracklisty");
+    updateActiveTrack();
+    startProgressTimer();
+
+    if (!sameTrack || !samePlayback || drift > 2) {
+        setPlayerMessage(`${nextPlaying ? "Odtwarzanie poza aplikacja" : "Pauza poza aplikacja"}: ${track.title}`);
+    }
+}
+
+function applySyncedEmptyPlayback(state) {
+    if (!state || typeof state.is_playing !== "boolean") {
+        return;
+    }
+    playerState.isPlaying = state.is_playing;
+    if (!state.is_playing) {
+        playerState.lastActionStartedAt = null;
+        stopProgressTimer();
+    }
+    updatePlayPauseButton();
+    updateProgressDisplay();
+}
+
+function registerPlaybackSyncError() {
+    playerState.syncErrorCount += 1;
+    if (playerState.syncErrorCount >= PLAYBACK_SYNC_PROBLEM_ERRORS) {
+        setPlaybackSyncStatus("Problem synchronizacji", "warning");
+    }
+}
+
+function applyPlaybackSyncReport(report, now = Date.now()) {
+    if (!report || report.status !== "ok") {
+        registerPlaybackSyncError();
+        return;
+    }
+
+    const state = report.state || {};
+    playerState.syncErrorCount = 0;
+    if (shouldProtectLocalAction(now)) {
+        setPlaybackSyncStatus("Synchronizacja...", "pending");
+        return;
+    }
+
+    const changedOutside = playerDiffersFromSyncedState(state);
+    applySyncedControls(state);
+
+    if (state.track) {
+        const syncedIndex = findSyncedTrackIndexForTracks(playerState.tracks, state);
+        if (syncedIndex !== null) {
+            applyKnownSyncedTrack(state, syncedIndex);
+        } else {
+            applyExternalSyncedTrack(state);
+        }
+    } else {
+        applySyncedEmptyPlayback(state);
+    }
+
+    setPlaybackSyncStatus(changedOutside ? "Zmieniono poza aplikacja" : "Zsynchronizowano", changedOutside ? "changed" : "default");
+}
+
+async function fetchPlaybackState() {
+    const response = await fetch("/api/playback/state");
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    return response.json();
+}
+
+function clearPlaybackSyncTimer() {
+    if (playerState.syncTimer !== null) {
+        window.clearTimeout(playerState.syncTimer);
+        playerState.syncTimer = null;
+    }
+}
+
+function schedulePlaybackSync(delay = getPlaybackSyncDelay()) {
+    clearPlaybackSyncTimer();
+    if (!shouldSchedulePlaybackSync(document.hidden)) {
+        return;
+    }
+    playerState.syncTimer = window.setTimeout(syncPlaybackState, delay);
+}
+
+async function syncPlaybackState() {
+    if (!shouldRunPlaybackSync(document.hidden, playerState.syncRequestInFlight)) {
+        return;
+    }
+    playerState.syncRequestInFlight = true;
+    try {
+        applyPlaybackSyncReport(await fetchPlaybackState());
+    } catch (error) {
+        registerPlaybackSyncError();
+    } finally {
+        playerState.syncRequestInFlight = false;
+        schedulePlaybackSync();
+    }
+}
+
+function stopPlaybackSync() {
+    clearPlaybackSyncTimer();
+}
+
+function startPlaybackSync() {
+    if (!document.hidden) {
+        syncPlaybackState();
+    }
+}
+
+function handlePlaybackVisibilityChange() {
+    if (document.hidden) {
+        stopPlaybackSync();
+        return;
+    }
+    syncPlaybackState();
 }
 
 function renderCover(target, album, placeholderText = "Album") {
@@ -773,12 +1115,13 @@ async function startTrack(albumId, trackIndex) {
     }
     setPlayerMessage("Ladowanie kolejki Sonosa...");
     try {
+        markLocalPlaybackAction();
         const report = await postJson("/api/playback/start", { album_id: albumId, track_index: trackIndex });
         applyReportTracks(report);
         if (report.state && report.state.track) {
             const nextIndex = Number.isInteger(report.state.track_index) ? report.state.track_index : trackIndex;
             playerState.loadedQueueAlbumId = albumId;
-            setCurrentTrack(nextIndex, report.state.is_playing);
+            setCurrentTrack(nextIndex, report.state.is_playing, syncedPositionSeconds(report.state) || 0);
             return;
         }
         if (report.state && report.state.album) {
@@ -795,12 +1138,13 @@ async function startTrack(albumId, trackIndex) {
 async function startAlbum(albumId) {
     setPlayerMessage("Ladowanie albumu do kolejki Sonosa...");
     try {
+        markLocalPlaybackAction();
         const report = await postJson("/api/playback/start", { album_id: albumId, track_index: 0 });
         applyReportTracks(report);
         if (report.state && report.state.track) {
             const nextIndex = Number.isInteger(report.state.track_index) ? report.state.track_index : 0;
             playerState.loadedQueueAlbumId = albumId;
-            setCurrentTrack(nextIndex, report.state.is_playing);
+            setCurrentTrack(nextIndex, report.state.is_playing, syncedPositionSeconds(report.state) || 0);
             return;
         }
         if (report.state && report.state.album) {
@@ -817,6 +1161,7 @@ async function startAlbum(albumId) {
 async function selectLoadedTrack(trackIndex) {
     setPlayerMessage("Uruchamianie wybranego utworu...");
     try {
+        markLocalPlaybackAction();
         const report = await postJson("/api/playback/select", {
             track_index: trackIndex,
             track_count: playerState.tracks.length,
@@ -825,7 +1170,7 @@ async function selectLoadedTrack(trackIndex) {
         const nextIndex = report.state && Number.isInteger(report.state.track_index)
             ? report.state.track_index
             : trackIndex;
-        setCurrentTrack(nextIndex, report.state ? report.state.is_playing : true);
+        setCurrentTrack(nextIndex, report.state ? report.state.is_playing : true, syncedPositionSeconds(report.state) || 0);
         if (report.state && report.state.repeat_mode) {
             playerState.repeatMode = report.state.repeat_mode;
             updateRepeatButton();
@@ -843,6 +1188,7 @@ async function togglePlaybackState() {
     }
     const nextPlaying = !playerState.isPlaying;
     try {
+        markLocalPlaybackAction();
         await postJson("/api/playback/state", { is_playing: nextPlaying });
         const elapsed = currentElapsedSeconds();
         if (playerState.tracks.length === 0 && playerState.album) {
@@ -863,6 +1209,7 @@ async function playNextTrack() {
         return;
     }
     try {
+        markLocalPlaybackAction();
         if (playerState.tracks.length === 0 && playerState.album) {
             await postJson("/api/playback/next", {
                 current_index: null,
@@ -898,6 +1245,7 @@ async function playPreviousTrack() {
         ? Math.floor((Date.now() - playerState.lastActionStartedAt) / 1000)
         : 0;
     try {
+        markLocalPlaybackAction();
         if (playerState.tracks.length === 0 && playerState.album) {
             await postJson("/api/playback/previous", {
                 current_index: null,
@@ -1044,10 +1392,10 @@ function showDiagnosticsPanel(show) {
 function togglePreparedMuteControl() {
     const muteButton = document.querySelector("#mute-control-button");
     const nextPressed = muteButton.getAttribute("aria-pressed") !== "true";
+    markLocalPlaybackAction();
     postJson("/api/playback/mute", { muted: nextPressed })
         .then(() => {
-            muteButton.setAttribute("aria-pressed", String(nextPressed));
-            muteButton.textContent = nextPressed ? "Unmute" : "Mute";
+            setMuteControl(nextPressed);
         })
         .catch((error) => {
             setPlayerMessage(error.message || "Nie udalo sie ustawic mute.");
@@ -1057,6 +1405,7 @@ function togglePreparedMuteControl() {
 function updateVolume() {
     const volume = Number(document.querySelector("#volume-control").value);
     document.querySelector("#volume-value").textContent = `${volume}%`;
+    markLocalPlaybackAction();
     postJson("/api/playback/volume", { volume })
         .catch((error) => {
             setPlayerMessage(error.message || "Nie udalo sie ustawic glosnosci.");
@@ -1072,6 +1421,7 @@ async function toggleRepeatMode() {
     playerState.repeatMode = mode;
     updateRepeatButton();
     try {
+        markLocalPlaybackAction();
         await postJson("/api/playback/repeat", { repeat_mode: mode });
     } catch (error) {
         playerState.repeatMode = previousMode;
@@ -1097,6 +1447,7 @@ function initializeApp() {
     document.querySelector("#repeat-control-button").addEventListener("click", toggleRepeatMode);
     document.querySelector("#mute-control-button").addEventListener("click", togglePreparedMuteControl);
     document.querySelector("#volume-control").addEventListener("input", () => {
+        markLocalPlaybackAction();
         const volume = Number(document.querySelector("#volume-control").value);
         document.querySelector("#volume-value").textContent = `${volume}%`;
     });
@@ -1121,13 +1472,16 @@ function initializeApp() {
         renderLibraryView();
     });
     document.querySelector("#clear-library-filters-button").addEventListener("click", clearLibraryFilters);
+    document.addEventListener("visibilitychange", handlePlaybackVisibilityChange);
 
+    setPlaybackSyncStatus("Synchronizacja: -");
     updateRepeatButton();
     updateProgressDisplay(0);
     updateLibraryControls();
     updateLibraryStatusChips();
     loadStatus();
     loadAlbums();
+    startPlaybackSync();
 }
 
 if (typeof window === "undefined" && typeof module !== "undefined" && module.exports) {
@@ -1135,10 +1489,15 @@ if (typeof window === "undefined" && typeof module !== "undefined" && module.exp
         albumMatchesQuery,
         formatAlbumCount,
         formatCacheStatusLabel,
+        findSyncedTrackIndexForTracks,
+        getPlaybackSyncDelay,
         getVisibleAlbums,
         hasArtist,
         isCacheReport,
         normalizeLibraryText,
+        shouldProtectLocalAction,
+        shouldRunPlaybackSync,
+        shouldSchedulePlaybackSync,
     };
 } else {
     initializeApp();

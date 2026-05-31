@@ -12,6 +12,7 @@ sys.path.insert(0, str(SRC_DIR))
 
 from sonos_album_controller.config import AppConfig  # noqa: E402
 from sonos_album_controller.playback import (  # noqa: E402
+    get_playback_state,
     select_queue_track,
     set_muted,
     set_playback_playing,
@@ -59,6 +60,14 @@ class RecordingSpeaker:
         self.volume = 31
         self.mute = False
         self.play_mode = "NORMAL"
+        self.transport_state = "PLAYING"
+        self.track_info = {
+            "title": "Second",
+            "uri": "track:2",
+            "duration": "0:04:01",
+            "position": "0:01:12",
+            "playlist_position": "2",
+        }
         self.avTransport = RecordingAvTransport(self)
         RecordingSpeaker.instances.append(self)
 
@@ -95,6 +104,14 @@ class RecordingSpeaker:
                 FakeTrack(title="Finale", uri="track:3", original_track_number="3", duration="0:02:59"),
             ]
         )
+
+    def get_current_transport_info(self) -> dict[str, str]:
+        self.calls.append(("get_current_transport_info", None))
+        return {"current_transport_state": self.transport_state}
+
+    def get_current_track_info(self) -> dict[str, str]:
+        self.calls.append(("get_current_track_info", None))
+        return self.track_info
 
 
 class RecordingAvTransport:
@@ -337,6 +354,130 @@ class PlaybackTest(unittest.TestCase):
 
         self.assertEqual(report.status, "not_configured")
         self.assertIn("SONOS_SPEAKER_IP", report.message or "")
+
+    def test_get_playback_state_reads_snapshot_without_mutating_playback(self) -> None:
+        report = get_playback_state(self._config(), speaker_factory=RecordingSpeaker)
+
+        self.assertEqual(report.status, "ok")
+        self.assertIsNotNone(report.state)
+        assert report.state is not None
+        self.assertTrue(report.state.is_playing)
+        self.assertEqual(report.state.volume, 31)
+        self.assertFalse(report.state.muted)
+        self.assertEqual(report.state.repeat_mode, "none")
+        self.assertEqual(report.state.track_index, 1)
+        self.assertEqual(report.state.position_seconds, 72)
+        self.assertEqual(report.state.duration_seconds, 241)
+        self.assertIsNotNone(report.state.track)
+        assert report.state.track is not None
+        self.assertEqual(report.state.track.title, "Second")
+        self.assertEqual(report.state.track.uri, "track:2")
+        self.assertEqual(
+            RecordingSpeaker.instances[-1].calls,
+            [("get_current_transport_info", None), ("get_current_track_info", None)],
+        )
+
+    def test_get_playback_state_without_ip_returns_controlled_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = get_playback_state(
+                AppConfig(sonos_speaker_ip=None, log_path=Path(temp_dir) / "app.log"),
+                speaker_factory=RecordingSpeaker,
+            )
+
+        self.assertEqual(report.status, "not_configured")
+        self.assertIn("SONOS_SPEAKER_IP", report.message or "")
+
+    def test_get_playback_state_handles_transport_error_without_technical_message(self) -> None:
+        class FailingSpeaker(RecordingSpeaker):
+            def get_current_transport_info(self) -> dict[str, str]:
+                raise RuntimeError("transport exploded")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "app.log"
+            report = get_playback_state(
+                AppConfig(sonos_speaker_ip="192.0.2.20", log_path=log_path),
+                speaker_factory=FailingSpeaker,
+            )
+
+            self.assertEqual(report.status, "error")
+            self.assertNotIn("transport exploded", report.message or "")
+            self.assertIn("transport exploded", log_path.read_text(encoding="utf-8"))
+
+    def test_get_playback_state_keeps_partial_snapshot_when_optional_properties_fail(self) -> None:
+        class FailingPropertySpeaker:
+            def __init__(self, speaker_ip: str) -> None:
+                self.speaker_ip = speaker_ip
+
+            def get_current_transport_info(self) -> dict[str, str]:
+                return {"current_transport_state": "PLAYING"}
+
+            def get_current_track_info(self) -> dict[str, str]:
+                return {
+                    "title": "External",
+                    "duration": "0:02:30",
+                    "position": "0:00:05",
+                }
+
+            @property
+            def volume(self) -> int:
+                raise RuntimeError("volume exploded")
+
+            @property
+            def mute(self) -> bool:
+                raise RuntimeError("mute exploded")
+
+            @property
+            def play_mode(self) -> str:
+                raise RuntimeError("mode exploded")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "app.log"
+            report = get_playback_state(
+                AppConfig(sonos_speaker_ip="192.0.2.20", log_path=log_path),
+                speaker_factory=FailingPropertySpeaker,
+            )
+
+            self.assertEqual(report.status, "ok")
+            self.assertIsNotNone(report.state)
+            assert report.state is not None
+            self.assertTrue(report.state.is_playing)
+            self.assertIsNone(report.state.volume)
+            self.assertIsNone(report.state.muted)
+            self.assertEqual(report.state.repeat_mode, "none")
+            self.assertEqual(report.state.position_seconds, 5)
+            self.assertEqual(report.state.duration_seconds, 150)
+            self.assertIsNotNone(report.state.track)
+            assert report.state.track is not None
+            self.assertEqual(report.state.track.title, "External")
+            log_text = log_path.read_text(encoding="utf-8")
+            self.assertIn("volume exploded", log_text)
+            self.assertIn("mute exploded", log_text)
+            self.assertIn("mode exploded", log_text)
+
+    def test_get_playback_state_maps_paused_mute_and_repeat_mode(self) -> None:
+        class PausedSpeaker(RecordingSpeaker):
+            def __init__(self, speaker_ip: str) -> None:
+                super().__init__(speaker_ip)
+                self.transport_state = "PAUSED_PLAYBACK"
+                self.mute = True
+                self.play_mode = "REPEAT_ONE"
+                self.track_info = {
+                    "title": "Opening",
+                    "duration": "0:03:12",
+                    "position": "0:00:08",
+                    "playlist_position": "1",
+                }
+
+        report = get_playback_state(self._config(), speaker_factory=PausedSpeaker)
+
+        self.assertEqual(report.status, "ok")
+        self.assertIsNotNone(report.state)
+        assert report.state is not None
+        self.assertFalse(report.state.is_playing)
+        self.assertTrue(report.state.muted)
+        self.assertEqual(report.state.repeat_mode, "track")
+        self.assertEqual(report.state.track_index, 0)
+        self.assertEqual(report.state.position_seconds, 8)
 
     def test_play_pause_and_next_map_to_speaker_commands(self) -> None:
         config = self._config()

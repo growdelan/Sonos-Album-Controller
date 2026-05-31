@@ -38,6 +38,8 @@ class PlayerState:
     muted: bool | None = None
     repeat_mode: RepeatMode = "none"
     audio_quality: str | None = None
+    position_seconds: int | None = None
+    duration_seconds: int | None = None
 
 
 @dataclass(frozen=True)
@@ -143,6 +145,52 @@ def set_playback_playing(
         return PlaybackReport(status="error", message=f"Nie udalo sie {action} odtwarzania. Sprawdz polaczenie z Sonos.")
 
     return PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=is_playing))
+
+
+def get_playback_state(
+    config: AppConfig,
+    speaker_factory: SpeakerFactory = SoCo,
+) -> PlaybackReport:
+    logger = get_app_logger(config.log_path)
+    speaker_report = _speaker_from_config(config, speaker_factory)
+    if speaker_report.status != "ok":
+        return PlaybackReport(status=speaker_report.status, message=speaker_report.message)
+
+    assert speaker_report.speaker is not None
+    speaker = speaker_report.speaker
+    try:
+        transport_info = dict(speaker.get_current_transport_info())
+    except Exception as error:
+        logger.error("Nie udalo sie odczytac stanu odtwarzania Sonosa: %s", error)
+        return PlaybackReport(
+            status="error",
+            message="Nie udalo sie odczytac stanu Sonosa. Sprawdz polaczenie i sproboj ponownie.",
+        )
+
+    track_info = _safe_current_track_info(speaker, logger)
+    track = _track_from_current_info(track_info)
+    position_seconds = _duration_to_seconds(track_info.get("position"))
+    duration_seconds = _duration_to_seconds(track_info.get("duration"))
+    if duration_seconds is None and track is not None:
+        duration_seconds = _duration_to_seconds(track.duration)
+    volume = _safe_speaker_attribute(speaker, "volume", logger)
+    muted = _safe_speaker_attribute(speaker, "mute", logger)
+    play_mode = _safe_speaker_attribute(speaker, "play_mode", logger)
+
+    return PlaybackReport(
+        status="ok",
+        state=PlayerState(
+            None,
+            track,
+            _track_index_from_current_info(track_info),
+            is_playing=_is_transport_playing(transport_info),
+            volume=_safe_int(volume),
+            muted=_safe_bool(muted),
+            repeat_mode=_repeat_mode_from_sonos_play_mode(play_mode),
+            position_seconds=position_seconds,
+            duration_seconds=duration_seconds,
+        ),
+    )
 
 
 def select_queue_track(
@@ -533,6 +581,70 @@ def _queue_tracks(speaker: Any, max_items: int) -> list[Track]:
     return tracks
 
 
+def _safe_current_track_info(speaker: Any, logger: Any) -> dict[str, Any]:
+    try:
+        track_info = speaker.get_current_track_info()
+    except Exception as error:
+        logger.warning("Nie udalo sie odczytac aktualnego utworu Sonosa: %s", error)
+        return {}
+    return dict(track_info) if isinstance(track_info, dict) else {}
+
+
+def _safe_speaker_attribute(speaker: Any, attribute: str, logger: Any) -> Any:
+    try:
+        return getattr(speaker, attribute)
+    except Exception as error:
+        logger.warning("Nie udalo sie odczytac pola %s snapshotu Sonosa: %s", attribute, error)
+        return None
+
+
+def _track_from_current_info(track_info: dict[str, Any]) -> Track | None:
+    title = _first_existing_text(track_info.get("title"))
+    if title is None:
+        return None
+    track_number = _safe_int(
+        _first_existing_text(
+            track_info.get("playlist_position"),
+            track_info.get("track_number"),
+            track_info.get("original_track_number"),
+        )
+    )
+    return Track(
+        number=track_number if track_number is not None and track_number > 0 else 1,
+        title=title,
+        duration=_first_existing_text(track_info.get("duration")),
+        uri=_first_existing_text(track_info.get("uri")),
+    )
+
+
+def _track_index_from_current_info(track_info: dict[str, Any]) -> int | None:
+    position = _safe_int(track_info.get("playlist_position"))
+    if position is None or position <= 0:
+        return None
+    return position - 1
+
+
+def _is_transport_playing(transport_info: dict[str, Any]) -> bool:
+    state = _first_existing_text(transport_info.get("current_transport_state"), transport_info.get("CurrentTransportState"))
+    return state == "PLAYING"
+
+
+def _duration_to_seconds(value: Any) -> int | None:
+    text = _first_existing_text(value)
+    if text is None:
+        return None
+    parts = text.split(":")
+    if len(parts) not in (2, 3):
+        return None
+    try:
+        total = 0
+        for part in parts:
+            total = (total * 60) + int(float(part))
+    except ValueError:
+        return None
+    return total
+
+
 def _safe_int(value: Any) -> int | None:
     try:
         return int(value)
@@ -565,3 +677,10 @@ def _sonos_play_mode(repeat_mode: RepeatMode) -> str:
         "album": "REPEAT_ALL",
         "track": "REPEAT_ONE",
     }[repeat_mode]
+
+
+def _repeat_mode_from_sonos_play_mode(play_mode: Any) -> RepeatMode:
+    return {
+        "REPEAT_ALL": "album",
+        "REPEAT_ONE": "track",
+    }.get(_first_existing_text(play_mode), "none")
