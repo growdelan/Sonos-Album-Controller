@@ -12,7 +12,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 ## Aktualny milestone / batch
 
 - Aktualny milestone: brak aktywnej implementacji po zakończeniu Milestone 14
-- Status: Milestone 14 zakończony po self-review, poprawkach, końcowym pozytywnym self-review, automatycznej walidacji i ręcznym smoke realnego Sonosa
+- Status: Milestone 14 zakończony po self-review, poprawkach, końcowym pozytywnym self-review, automatycznej walidacji i ręcznym smoke realnego Sonosa; commit implementacyjny `da2e573` został wypchnięty na `origin/codex/synchronizacja`
 - Kontrakt sprintu: ustalony przed implementacją; profil `openai_patch`, format patch/diff przez `apply_patch`
 - Zakres poza zakończonym milestone’em: WebSocket/SSE, nowe zależności, obsługa wielu głośników, automatyczna nawigacja do innego albumu, odświeżanie `/api/albums`, Favorites lub cache w ramach pollingu oraz implementacja refreshu biblioteki
 
@@ -66,16 +66,18 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Co jest w trakcie
 
-- Brak aktywnej implementacji; Milestone 14 jest zakończony lokalnie po końcowym self-review, automatycznej walidacji i ręcznym smoke.
+- Brak aktywnej implementacji; Milestone 14 jest zakończony, zapisany w commicie `da2e573` i wypchnięty na `origin/codex/synchronizacja`.
 
 ## Co jest następne
 
-- Po commicie i pushu rozpocząć kolejny przyrost od nowego PRD albo kolejnej decyzji produktowej.
+- Rozpocząć kolejny przyrost od nowego PRD albo kolejnej decyzji produktowej.
 
 ## Walidacja
 
 | Data | Zakres | Komenda / sposób | Wynik | Uwagi |
 |---|---|---|---|---|
+| 2026-05-31 | Wrap-up po finalizacji Milestone 14 | `git status --short --branch`; `git log -3 --oneline --decorate`; `git diff --check` | PASS | Gałąź `codex/synchronizacja` śledzi `origin/codex/synchronizacja`; commit implementacyjny `da2e573` jest wypchnięty. Wrap-up aktualizuje wyłącznie dokumentację operacyjną. |
+| 2026-05-31 | Push Milestone 14 | `git push -u origin codex/synchronizacja` | PASS | Gałąź `codex/synchronizacja` została utworzona na `origin` i ustawiona jako upstream; commit implementacyjny: `da2e573`. |
 | 2026-05-31 | Finalizacja Milestone 14 | `node --check src/sonos_album_controller/static/app.js`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; końcowy self-review | PASS | 86 testów pełnych PASS; końcowy self-review zakończony bez problemów krytycznych; manualny smoke P2/P3 potwierdzony przez użytkownika na realnym Sonos Era 300. |
 | 2026-05-31 | Manualny smoke Milestone 14 na realnym Sonos Era 300 | Ręczne potwierdzenie użytkownika po testach poza aplikacją | PASS | Użytkownik potwierdził, że P2 działa poprawnie: synchronizacja zmian wykonanych poza aplikacją na realnym Sonos Era 300. Potwierdził też P3: ukrycie/powrót karty i Page Visibility działają poprawnie w ręcznym smoke. |
 | 2026-05-31 | Poprawki kodowe po ponownym self-review Milestone 14 | `node --check src/sonos_album_controller/static/app.js`; `uv run python -m unittest tests.test_playback tests.test_app_smoke tests.test_frontend_library`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check` | PASS / PARTIAL | 50 testów zawężonych i 86 testów pełnych PASS. Dodano kontrolowany odczyt opcjonalnych właściwości SoCo w snapshotcie playbacku oraz ochronę lokalnej edycji volume już podczas zdarzenia `input`. Manualny smoke realnego Sonosa i Page Visibility w prawdziwej karcie pozostają wymagane przed finalizacją. |
@@ -261,14 +263,15 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 
 ## Handoff do następnej sesji
 
-- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, Milestone 5 ma zakończony widok albumu i player bez odtwarzania, Milestone 6 ma zakończony playback z fallbackiem `AddURIToQueue` i odczytem tracklisty z kolejki Sonosa po starcie albumu, Milestone 7 ma zakończone tryby pętli i lokalny pasek postępu po pozytywnym self-review, Milestone 8 ma zakończony neutralny badge jakości audio, nietechniczne błędy/logi i ciemne polerowanie UI MVP po pozytywnym self-review, Milestone 9 ma zakończony premium music-first frontend, Milestone 10 ma zakończony wybór widocznej piosenki z tracklisty i wskaźnik grania aktywnego utworu, Milestone 11 ma zakończone wzbogacanie artystów albumów przez Apple/iTunes lookup, Milestone 12 ma zakończone wzbogacanie metadata `AddURIToQueue` o `albumArtURI`, Milestone 13 ma zakończone lokalne wyszukiwanie/sortowanie/filtrowanie biblioteki oraz finalnie wypolerowany toolbar wyszukiwania po uwadze wizualnej, a Milestone 14 ma zakończony read-only `GET /api/playback/state` i polling playera po poprawkach, końcowym pozytywnym self-review oraz potwierdzonym manualnym smoke realnego Sonosa.
+- Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, Milestone 5 ma zakończony widok albumu i player bez odtwarzania, Milestone 6 ma zakończony playback z fallbackiem `AddURIToQueue` i odczytem tracklisty z kolejki Sonosa po starcie albumu, Milestone 7 ma zakończone tryby pętli i lokalny pasek postępu po pozytywnym self-review, Milestone 8 ma zakończony neutralny badge jakości audio, nietechniczne błędy/logi i ciemne polerowanie UI MVP po pozytywnym self-review, Milestone 9 ma zakończony premium music-first frontend, Milestone 10 ma zakończony wybór widocznej piosenki z tracklisty i wskaźnik grania aktywnego utworu, Milestone 11 ma zakończone wzbogacanie artystów albumów przez Apple/iTunes lookup, Milestone 12 ma zakończone wzbogacanie metadata `AddURIToQueue` o `albumArtURI`, Milestone 13 ma zakończone lokalne wyszukiwanie/sortowanie/filtrowanie biblioteki oraz finalnie wypolerowany toolbar wyszukiwania po uwadze wizualnej, a Milestone 14 ma zakończony i wypchnięty read-only `GET /api/playback/state` oraz polling playera po poprawkach, końcowym pozytywnym self-review i potwierdzonym manualnym smoke realnego Sonosa.
 - Decyzje, których nie wolno zgubić: FastAPI + SoCo, statyczny frontend HTML/CSS/vanilla JS, jeden Sonos Era 300 po stałym IP z `SONOS_SPEAKER_IP`, cache albumów w `~/.sonos-album-controller/cache/albums.json` albo `SONOS_CACHE_PATH`, jakość audio best effort, testy automatyczne bez realnego Sonosa.
 - Pliki, które warto doczytać jako pierwsze: `AGENTS.md`, `STATUS.md`, `spec.md`, `ROADMAP.md`, `prd/006-lepsza-synchronizacja-stanu-sonosa.md`, `src/sonos_album_controller/playback.py`, `src/sonos_album_controller/main.py`, `src/sonos_album_controller/static/app.js`, `src/sonos_album_controller/static/index.html`, `tests/test_playback.py`, `tests/test_frontend_library.py`, `tests/test_app_smoke.py`.
-- Następny bezpieczny krok: po commicie i pushu wybrać kolejny przyrost przez nowe PRD albo decyzję produktową.
+- Następny bezpieczny krok: wybrać kolejny przyrost przez nowe PRD albo decyzję produktową.
 - Czego nie robić: nie zaczynać pełnej integracji z Sonosem przed PoC z Milestone 1; nie dodawać zależności frontendowych bez potrzeby.
 
 ## Ostatnie aktualizacje
 
+- 2026-05-31: Wrap-up po finalizacji Milestone 14 potwierdził, że gałąź `codex/synchronizacja` śledzi `origin/codex/synchronizacja`, a commit implementacyjny `da2e573` został wypchnięty.
 - 2026-05-31: Końcowy self-review Milestone 14 zakończył się bez problemów krytycznych; dokumentacja operacyjna została przygotowana do finalizacji, commita i pusha.
 - 2026-05-31: Po ponownym self-review Milestone 14 poprawiono odporność snapshotu na błędy opcjonalnych właściwości SoCo, ochronę lokalnego `input` volume przed pollingiem oraz uzupełniono walidację w `STATUS.md`.
 - 2026-05-31: Użytkownik potwierdził ręczny smoke Milestone 14: P2 synchronizacji z realnym Sonos Era 300 oraz P3 Page Visibility działają poprawnie.
