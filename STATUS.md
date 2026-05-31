@@ -64,16 +64,17 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Co jest w trakcie
 
-- Brak aktywnej implementacji; Milestone 13 jest zakończony po pozytywnym review i walidacji.
+- Brak aktywnej implementacji; korekta wizualna toolbara wyszukiwania albumów po Milestone 13 jest zakończona po review i walidacji.
 
 ## Co jest następne
 
-- Rozpocząć kolejny przyrost od nowego PRD albo decyzji produktowej.
+- Rozpocząć kolejny przyrost od nowego PRD/decyzji produktowej.
 
 ## Walidacja
 
 | Data | Zakres | Komenda / sposób | Wynik | Uwagi |
 |---|---|---|---|---|
+| 2026-05-31 | Korekta wizualna toolbara biblioteki po Milestone 13 | `node --check src/sonos_album_controller/static/app.js`; `uv run python -m unittest tests.test_frontend_library tests.test_app_smoke`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; Browser smoke na fake backendzie `http://127.0.0.1:8134` | PASS | Toolbar tworzy jedną spójną powierzchnię, kontrolki mają 44px wysokości, `Bez artysty` ma zmniejszony font i nie ściska się w polu, brak poziomego overflow, a normalny stan `ok` nie pokazuje już dużego komunikatu `Ostatnie odświeżenie` pod paskiem. |
 | 2026-05-31 | Finalna walidacja Milestone 13 po ponownym self-review | `node --check src/sonos_album_controller/static/app.js`; `uv run python -m unittest tests.test_frontend_library tests.test_app_smoke`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; kontrola braku diffu backendu/zależności | PASS | 16 testów frontend/smoke i 78 testów pełnych PASS; backend, publiczne API, cache, `pyproject.toml` i `uv.lock` bez zmian. |
 | 2026-05-31 | Poprawki po self-review Milestone 13 | `node --check src/sonos_album_controller/static/app.js`; `uv run python -m unittest tests.test_frontend_library tests.test_app_smoke`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check` | PASS | Naprawiono zachowanie komunikatu `not_configured`/`error` po użyciu kontrolek biblioteki oraz jednoznaczny tekst i `aria-label` chipa cache. Browser wyrenderował stan początkowy bez IP, ale interaktywne wpisywanie nie zostało zaliczone z powodu błędu narzędzia. |
 | 2026-05-31 | Milestone 13 implementacja lokalna | `node --check src/sonos_album_controller/static/app.js`; `uv run python -m unittest tests.test_frontend_library tests.test_app_smoke`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; Browser smoke desktop 1280x720 i mobile 390x844 na tymczasowym `SONOS_CACHE_PATH` | PASS | 78 testów pełnych PASS; smoke potwierdził toolbar nad siatką, brak poziomego overflow, wyszukiwanie bez diakrytyków, sortowanie, filtr `bez artysty`, pusty stan, zachowanie ustawień po powrocie z albumu i po `Odśwież albumy`. |
@@ -147,6 +148,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 | Data | Zakres | Wynik | Problemy krytyczne | Następna akcja |
 |---|---|---|---|---|
+| 2026-05-31 | Self-review korekty wizualnej toolbara biblioteki | PASS | brak | Finalizacja operacyjna, commit i push. |
 | 2026-05-31 | Self-review Milestone 13 po poprawkach | PASS | brak | Finalizacja operacyjna, commit i push. |
 | 2026-05-31 | Self-review Milestone 13 | P2/P3 | Kontrolki biblioteki nadpisywały komunikaty `not_configured`/`error`; chip cache miał niejednoznaczny tekst dla danych niepochodzących z cache | Poprawki wdrożone; wykonać ponowny self-review przed finalizacją. |
 | 2026-05-30 | Self-review Milestone 12 | PASS | brak | Finalizacja operacyjna, commit i push. |
@@ -225,6 +227,7 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 | 2026-05-23 | Milestone 11 artyści albumów z Apple Lookup | `src/`, `tests/`, `prd/003-artysci-albumow.md`, `spec.md`, `ROADMAP.md`, `STATUS.md`, `README.md` | 100% po poprawkach self-review | Implementacja wzbogacania artystów, cache i ukrywania fallbacku UI przetrwała ponowny review; poprawki ograniczyły się do budżetu czasu lookupów, circuit breakera i realnego smoke Sonos bez poszerzania zakresu. |
 | 2026-05-30 | Milestone 12 okładki w Ostatnio odtwarzanych Sonos | `src/`, `tests/`, `prd/004-okladki-w-ostatnio-odtworzonych.md`, `spec.md`, `ROADMAP.md`, `STATUS.md` | 100% po self-review, bez poprawek krytycznych | Minimalne wzbogacenie DIDL-Lite metadata, testy payloadu i dokumentacja przeszły review bez zmian; ręczny smoke oficjalnej aplikacji Sonos pozostaje opcjonalną walidacją integracyjną. |
 | 2026-05-31 | Milestone 13 wyszukiwanie i sortowanie albumów | `src/sonos_album_controller/static/`, `tests/`, `prd/005-wyszukiwanie-sortowanie-albumow.md`, `spec.md`, `ROADMAP.md`, `STATUS.md` | 100% po poprawkach self-review | Implementacja pozostała frontend-only, bez nowych zależności i bez zmian API/cache; poprawki ograniczyły się do stanów `not_configured`/`error` i jednoznacznego chipa cache. |
+| 2026-05-31 | Korekta wizualna toolbara biblioteki | `src/sonos_album_controller/static/`, `tests/test_app_smoke.py`, `STATUS.md` | 100% po self-review | Korekta pozostała CSS/HTML-only poza ukryciem duplikatu komunikatu `Ostatnie odświeżenie`; dodatkowa mikrokorekta zmniejszyła font `Bez artysty` bez zmiany logiki i API. |
 
 ## Blokery i ryzyka
 
@@ -302,3 +305,4 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - 2026-05-31: Zaimplementowano Milestone 13 lokalnie: pasek narzędzi biblioteki, wyszukiwanie po tytule/artyście bez diakrytyków, sortowanie, filtr `bez artysty`, chipy statusu, liczniki i pusty stan; walidacje automatyczne oraz Browser smoke desktop/mobile przeszły, milestone wymaga self-review.
 - 2026-05-31: Po self-review Milestone 13 poprawiono zachowanie komunikatów `not_configured`/`error` po użyciu kontrolek biblioteki oraz jednoznaczność chipa cache; walidacje automatyczne przeszły, milestone wymaga ponownego self-review.
 - 2026-05-31: Ponowny self-review Milestone 13 zakończył się bez problemów krytycznych; finalne walidacje przeszły, a dokumentacja operacyjna została domknięta.
+- 2026-05-31: Ujednolicono wizualnie toolbar wyszukiwania/sortowania albumów jako jedną powierzchnię z równymi kontrolkami, bez widocznych labelek i bez dużego komunikatu `Ostatnie odświeżenie` przy normalnym stanie danych; po uwadze wizualnej zmniejszono font przycisku `Bez artysty`, żeby tekst mieścił się w polu.

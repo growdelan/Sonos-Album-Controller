@@ -585,9 +585,7 @@ function renderLibraryView() {
             return;
         }
         hideLibraryEmptyAction();
-        setPanelMessage(message, report.last_refresh
-            ? `Ostatnie odswiezenie: ${report.last_refresh}.`
-            : "");
+        setPanelMessage(message, "");
     }
     renderAlbumCards(visibleAlbums);
 }
