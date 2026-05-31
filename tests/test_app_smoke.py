@@ -162,6 +162,38 @@ class AppSmokeTest(unittest.TestCase):
         update_volume.assert_called_once()
         self.assertEqual(response.json()["state"]["volume"], 55)
 
+    def test_playback_state_get_endpoint_uses_read_only_playback_service(self) -> None:
+        report = PlaybackReport(
+            status="ok",
+            state=PlayerState(
+                album=None,
+                track=Track(number=2, title="Second", duration="0:04:01", uri="track:2"),
+                track_index=1,
+                is_playing=True,
+                volume=42,
+                muted=True,
+                repeat_mode="album",
+                position_seconds=72,
+                duration_seconds=241,
+            ),
+        )
+
+        with patch("sonos_album_controller.main.get_playback_state", return_value=report) as read_state:
+            response = self.client.get("/api/playback/state")
+
+        self.assertEqual(response.status_code, 200)
+        read_state.assert_called_once()
+        body = response.json()
+        self.assertEqual(body["status"], "ok")
+        self.assertEqual(body["state"]["track"]["title"], "Second")
+        self.assertEqual(body["state"]["track_index"], 1)
+        self.assertTrue(body["state"]["is_playing"])
+        self.assertEqual(body["state"]["volume"], 42)
+        self.assertTrue(body["state"]["muted"])
+        self.assertEqual(body["state"]["repeat_mode"], "album")
+        self.assertEqual(body["state"]["position_seconds"], 72)
+        self.assertEqual(body["state"]["duration_seconds"], 241)
+
     def test_playback_next_endpoint_passes_player_context(self) -> None:
         report = PlaybackReport(status="ok", state=PlayerState(None, None, 2, is_playing=True, repeat_mode="album"))
 
@@ -220,6 +252,7 @@ class AppSmokeTest(unittest.TestCase):
         self.assertIn('id="album-search-input"', html)
         self.assertIn('id="album-sort-select"', html)
         self.assertIn('id="album-sort-direction-button"', html)
+        self.assertIn('id="player-sync-status"', html)
         self.assertIn('id="missing-artist-filter-button"', html)
         self.assertIn('id="cache-status-chip"', html)
         self.assertIn('id="refresh-status-chip"', html)
@@ -235,6 +268,18 @@ class AppSmokeTest(unittest.TestCase):
         self.assertIn("function formatAlbumCount", script)
         self.assertIn("function formatCacheStatusLabel", script)
         self.assertIn("function clearLibraryFilters", script)
+        self.assertIn("async function fetchPlaybackState", script)
+        self.assertIn('fetch("/api/playback/state")', script)
+        self.assertIn("function getPlaybackSyncDelay", script)
+        self.assertIn("function findSyncedTrackIndexForTracks", script)
+        self.assertIn("function shouldSchedulePlaybackSync", script)
+        self.assertIn("function shouldRunPlaybackSync", script)
+        self.assertIn('document.addEventListener("visibilitychange"', script)
+        self.assertIn("function markLocalPlaybackAction", script)
+        self.assertIn(
+            'document.querySelector("#volume-control").addEventListener("input", () => {\n        markLocalPlaybackAction();',
+            script,
+        )
         self.assertIn('sortBy: "sonos"', script)
         self.assertIn('libraryState.missingArtistOnly = false;', script)
         self.assertIn('if (report.status === "not_configured")', script)

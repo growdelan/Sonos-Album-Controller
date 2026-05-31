@@ -750,6 +750,29 @@ dd {
     width: 100%;
 }
 
+.player-sync-status {
+    color: var(--text-soft);
+    font-size: 0.74rem;
+    font-weight: 800;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+}
+
+.player-sync-status.sync-changed {
+    color: var(--accent-strong);
+}
+
+.player-sync-status.sync-warning {
+    color: #ffd1d1;
+}
+
+.player-sync-status.sync-pending {
+    color: var(--text-muted);
+}
+
 .player-marquee-text {
     display: inline-block;
     will-change: transform;
