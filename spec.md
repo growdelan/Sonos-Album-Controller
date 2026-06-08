@@ -182,17 +182,17 @@ Miejsca wymagające walidacji lub smoke testów:
 
 - Decyzja: Cache albumów zostanie rozdzielony per aktywny głośnik. (dotyczy PRD: 007-automatyczne-wykrywanie-glosnikow.md)
 - Uzasadnienie: PRD 007 wskazuje, że po wyborze wielu dostępnych urządzeń cache nie może mieszać bibliotek różnych głośników.
-- Konsekwencje: Warstwa cache musi używać stabilnego identyfikatora głośnika albo równoważnego bezpiecznego klucza. Zmiana aktywnego głośnika nie może pokazywać danych z cache poprzedniego urządzenia jako danych nowego. TODO: Czy `SONOS_CACHE_PATH` ma pozostać ścieżką pojedynczego pliku zgodności, czy po PRD 007 ma wskazywać katalog bazowy dla cache per głośnik?
+- Konsekwencje: Warstwa cache musi używać stabilnego identyfikatora głośnika albo równoważnego bezpiecznego klucza. Zmiana aktywnego głośnika nie może pokazywać danych z cache poprzedniego urządzenia jako danych nowego. Domyślny cache po wyborze aktywnego głośnika jest zapisywany per urządzenie pod `~/.sonos-album-controller/cache/speakers/<stable_id>/albums.json`. `SONOS_CACHE_PATH` pozostaje zgodnościowym override dokładnej ścieżki pojedynczego pliku cache dla testów i ręcznych scenariuszy migracyjnych.
 - Dotyczy PRD / milestone’u: `prd/007-automatyczne-wykrywanie-glosnikow.md`; Milestone 16.
 
 - Decyzja: Aplikacja steruje jednym głośnikiem Sonos Era 300 po stałym IP z lokalnej konfiguracji.
 - Uzasadnienie: PRD zakłada prywatną aplikację jednoosobową, bez automatycznego wykrywania głośników i bez wielu urządzeń.
-- Konsekwencje: Ta decyzja opisuje stan bazowy sprzed `prd/007-automatyczne-wykrywanie-glosnikow.md`. Po PRD 007 stałe IP pozostaje zgodnościowym fallbackiem albo jawnym override, ale nie jest jedynym sposobem wyboru głośnika. TODO: Doprecyzować priorytet konfliktu między zapisanym aktywnym głośnikiem a ustawionym `SONOS_SPEAKER_IP`: czy zmienna środowiskowa zawsze wymusza override, czy działa tylko jako fallback przy braku zapisanego/wykrytego wyboru?
+- Konsekwencje: Ta decyzja opisuje stan bazowy sprzed `prd/007-automatyczne-wykrywanie-glosnikow.md`. Po PRD 007 stałe IP pozostaje zgodnościowym jawnym override: gdy `SONOS_SPEAKER_IP` jest ustawione, backend używa tego adresu zamiast zapisanego wyboru i oznacza źródło aktywnego głośnika jako ręczne. Bez tej zmiennej backend używa zapisanego wyboru po stabilnym identyfikatorze albo automatycznie zapisuje jedyny wykryty głośnik.
 - Dotyczy PRD / milestone’u: PRD 4.1, 9, 12.6; Milestone 1, Milestone 2; zmienione przez `prd/007-automatyczne-wykrywanie-glosnikow.md`, Milestone 15 i Milestone 16.
 
 - Decyzja: Albumy i metadane będą cache’owane lokalnie, a obrazy okładek nie muszą być pobierane do lokalnego magazynu.
 - Uzasadnienie: PRD wymaga działania z cache przy niedostępności Sonosa i dopuszcza przechowywanie linków/URI okładek.
-- Konsekwencje: Błąd odświeżenia nie może usuwać poprzedniego cache; UI musi rozróżniać dane świeże i dane z cache. Domyślna lokalizacja cache bazowego to `~/.sonos-album-controller/cache/albums.json`, z możliwością nadpisania przez `SONOS_CACHE_PATH`. Po `prd/007-automatyczne-wykrywanie-glosnikow.md` cache musi zostać rozdzielony per aktywny głośnik, a semantyka `SONOS_CACHE_PATH` wymaga doprecyzowania przed implementacją.
+- Konsekwencje: Błąd odświeżenia nie może usuwać poprzedniego cache; UI musi rozróżniać dane świeże i dane z cache. Historyczna lokalizacja cache bazowego to `~/.sonos-album-controller/cache/albums.json`, z możliwością nadpisania dokładną ścieżką pliku przez `SONOS_CACHE_PATH`. Po `prd/007-automatyczne-wykrywanie-glosnikow.md` domyślny cache dla aktywnego głośnika jest rozdzielony per stabilny identyfikator pod `~/.sonos-album-controller/cache/speakers/<stable_id>/albums.json`; `SONOS_CACHE_PATH` zachowuje zgodnościowy override pojedynczego pliku.
 - Dotyczy PRD / milestone’u: PRD 7, 11.2, 11.3; Milestone 4; zmienione przez `prd/007-automatyczne-wykrywanie-glosnikow.md`, Milestone 16.
 
 - Decyzja: Informacja o jakości audio jest funkcją best effort.
@@ -212,7 +212,7 @@ Miejsca wymagające walidacji lub smoke testów:
 
 - Decyzja: Stały adres IP głośnika jest odczytywany ze zmiennej środowiskowej `SONOS_SPEAKER_IP`.
 - Uzasadnienie: Milestone 1 wymaga lokalnej konfiguracji IP bez sekretów w repo i bez automatycznego wykrywania wielu głośników.
-- Konsekwencje: Ta decyzja opisuje zgodnościową konfigurację sprzed `prd/007-automatyczne-wykrywanie-glosnikow.md`. Brak zmiennej historycznie skutkował kontrolowanym stanem `not_configured`; po PRD 007 brak zmiennej powinien uruchamiać przepływ discovery i wyboru aktywnego głośnika, a `SONOS_SPEAKER_IP` pozostaje fallbackiem albo override po doprecyzowaniu priorytetu.
+- Konsekwencje: Ta decyzja opisuje zgodnościową konfigurację sprzed `prd/007-automatyczne-wykrywanie-glosnikow.md`. Brak zmiennej historycznie skutkował kontrolowanym stanem `not_configured`; po PRD 007 brak zmiennej uruchamia przepływ discovery i wyboru aktywnego głośnika. Gdy `SONOS_SPEAKER_IP` jest ustawione, jest jawnym override zapisanego wyboru i nie zapisuje nowego aktywnego głośnika z discovery.
 - Dotyczy PRD / milestone’u: PRD 4.1, 9, 12.6; Milestone 1, Milestone 2; zmienione przez `prd/007-automatyczne-wykrywanie-glosnikow.md`, Milestone 15 i Milestone 16.
 
 - Decyzja: Błędy i ostrzeżenia diagnostyki są zapisywane do pliku logów pod ścieżką `~/.sonos-album-controller/logs/app.log`, z możliwością nadpisania przez `SONOS_LOG_PATH`.

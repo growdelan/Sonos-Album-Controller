@@ -13,15 +13,93 @@ sys.path.insert(0, str(SRC_DIR))
 
 from sonos_album_controller.album_detail import AlbumDetailReport  # noqa: E402
 from sonos_album_controller.albums import Album, AlbumsReport, Track  # noqa: E402
-from sonos_album_controller.config import SONOS_CACHE_PATH_ENV, SONOS_LOG_PATH_ENV, SONOS_SPEAKER_IP_ENV  # noqa: E402
+from sonos_album_controller.config import AppConfig, SONOS_CACHE_PATH_ENV, SONOS_LOG_PATH_ENV, SONOS_SPEAKER_IP_ENV  # noqa: E402
+from sonos_album_controller.device_selection import SpeakerDevice, SpeakerSelectionReport  # noqa: E402
 from sonos_album_controller.diagnostics import CacheDiagnostics, DiagnosticsReport  # noqa: E402
-from sonos_album_controller.main import app  # noqa: E402
+import sonos_album_controller.main as main_module  # noqa: E402
 from sonos_album_controller.playback import PlaybackReport, PlayerState  # noqa: E402
+
+
+app = main_module.app
+
+
+class ActiveConfigCacheTest(unittest.TestCase):
+    def setUp(self) -> None:
+        main_module._ACTIVE_CONFIG_CACHE.clear()
+        self.addCleanup(main_module._ACTIVE_CONFIG_CACHE.clear)
+
+    def test_active_config_refreshes_saved_selection_once_per_process(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            selection_path = Path(temp_dir) / "active_speaker.json"
+            selection_path.write_text(
+                '{"stable_id": "RINCON_55", "name": "Biuro", "ip_address": "192.0.2.10"}',
+                encoding="utf-8",
+            )
+            base_config = AppConfig(
+                sonos_speaker_ip=None,
+                log_path=Path(temp_dir) / "app.log",
+                cache_path=Path(temp_dir) / "albums.json",
+                selection_path=selection_path,
+            )
+            refreshed_config = AppConfig(
+                sonos_speaker_ip="192.0.2.55",
+                log_path=Path(temp_dir) / "app.log",
+                cache_path=Path(temp_dir) / "speakers" / "RINCON_55" / "albums.json",
+                selection_path=selection_path,
+                active_speaker_id="RINCON_55",
+                active_speaker_name="Biuro",
+                speaker_source="discovery",
+            )
+            allow_discovery_calls = []
+
+            def resolve_config(config: AppConfig, allow_discovery: bool) -> AppConfig:
+                allow_discovery_calls.append(allow_discovery)
+                return refreshed_config
+
+            with patch("sonos_album_controller.main.load_config", return_value=base_config), patch(
+                "sonos_album_controller.main.resolve_active_config",
+                side_effect=resolve_config,
+            ):
+                first = main_module._active_config()
+                second = main_module._active_config()
+
+        self.assertEqual(first.sonos_speaker_ip, "192.0.2.55")
+        self.assertEqual(second.sonos_speaker_ip, "192.0.2.55")
+        self.assertEqual(allow_discovery_calls, [True])
 
 
 class AppSmokeTest(unittest.TestCase):
     def setUp(self) -> None:
         self.client = TestClient(app)
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        self.active_config = AppConfig(
+            sonos_speaker_ip=None,
+            log_path=Path(self.temp_dir.name) / "app.log",
+            cache_path=Path(self.temp_dir.name) / "albums.json",
+            selection_path=Path(self.temp_dir.name) / "active_speaker.json",
+        )
+        self.active_config_patch = patch("sonos_album_controller.main._active_config", return_value=self.active_config)
+        self.active_config_patch.start()
+        self.addCleanup(self.active_config_patch.stop)
+
+    def _selected_config(self) -> AppConfig:
+        return AppConfig(
+            sonos_speaker_ip="192.0.2.55",
+            log_path=Path(self.temp_dir.name) / "selected.log",
+            cache_path=Path(self.temp_dir.name) / "speakers" / "RINCON_55" / "albums.json",
+            selection_path=Path(self.temp_dir.name) / "active_speaker.json",
+            active_speaker_id="RINCON_55",
+            active_speaker_name="Biuro",
+            speaker_source="saved",
+        )
+
+    def _assert_selected_config(self, config: AppConfig) -> None:
+        self.assertEqual(config.sonos_speaker_ip, "192.0.2.55")
+        self.assertEqual(config.active_speaker_id, "RINCON_55")
+        self.assertEqual(config.active_speaker_name, "Biuro")
+        self.assertEqual(config.speaker_source, "saved")
+        self.assertIn("RINCON_55", str(config.cache_path))
 
     def test_status_endpoint_returns_controlled_state(self) -> None:
         with patch.dict("os.environ", {}, clear=True):
@@ -41,6 +119,13 @@ class AppSmokeTest(unittest.TestCase):
                     SONOS_LOG_PATH_ENV: str(Path(temp_dir) / "app.log"),
                 },
                 clear=True,
+            ), patch(
+                "sonos_album_controller.main._active_config",
+                return_value=AppConfig(
+                    sonos_speaker_ip="192.0.2.20",
+                    log_path=Path(temp_dir) / "app.log",
+                    cache_path=Path(temp_dir) / "albums.json",
+                ),
             ):
                 response = self.client.get("/api/diagnostics")
 
@@ -49,6 +134,28 @@ class AppSmokeTest(unittest.TestCase):
         self.assertEqual(body["configured_ip"], "192.0.2.20")
         self.assertEqual(body["connection_status"], "configured")
         self.assertFalse(body["cache"]["available"])
+
+    def test_diagnostics_endpoint_passes_active_speaker_config(self) -> None:
+        report = DiagnosticsReport(
+            configured_ip="192.0.2.55",
+            connection_status="configured",
+            last_error=None,
+            cache=CacheDiagnostics(available=True, last_refresh="2026-06-08T10:00:00", status="fresh"),
+            log_path=str(Path(self.temp_dir.name) / "selected.log"),
+            active_speaker_id="RINCON_55",
+            active_speaker_name="Biuro",
+            speaker_source="saved",
+        )
+
+        with patch("sonos_album_controller.main._active_config", return_value=self._selected_config()), patch(
+            "sonos_album_controller.main.build_diagnostics",
+            return_value=report,
+        ) as diagnostics_service:
+            response = self.client.get("/api/diagnostics")
+
+        self.assertEqual(response.status_code, 200)
+        diagnostics_service.assert_called_once()
+        self._assert_selected_config(diagnostics_service.call_args.args[0])
 
     def test_connection_test_endpoint_uses_diagnostic_service(self) -> None:
         report = DiagnosticsReport(
@@ -88,6 +195,19 @@ class AppSmokeTest(unittest.TestCase):
         self.assertEqual(body["status"], "ok")
         self.assertEqual(body["albums"][0]["title"], "Album")
         self.assertEqual(body["albums"][0]["artist"], "Artist")
+
+    def test_albums_endpoint_passes_active_speaker_config(self) -> None:
+        report = AlbumsReport(status="ok", albums=[])
+
+        with patch("sonos_album_controller.main._active_config", return_value=self._selected_config()), patch(
+            "sonos_album_controller.main.load_albums",
+            return_value=report,
+        ) as load_service:
+            response = self.client.get("/api/albums")
+
+        self.assertEqual(response.status_code, 200)
+        load_service.assert_called_once()
+        self._assert_selected_config(load_service.call_args.args[0])
 
     def test_albums_refresh_endpoint_uses_refresh_service(self) -> None:
         report = AlbumsReport(status="ok", albums=[])
@@ -194,6 +314,19 @@ class AppSmokeTest(unittest.TestCase):
         self.assertEqual(body["state"]["position_seconds"], 72)
         self.assertEqual(body["state"]["duration_seconds"], 241)
 
+    def test_playback_polling_endpoint_passes_active_speaker_config(self) -> None:
+        report = PlaybackReport(status="ok", state=PlayerState(None, None, None, is_playing=False))
+
+        with patch("sonos_album_controller.main._active_config", return_value=self._selected_config()), patch(
+            "sonos_album_controller.main.get_playback_state",
+            return_value=report,
+        ) as read_state:
+            response = self.client.get("/api/playback/state")
+
+        self.assertEqual(response.status_code, 200)
+        read_state.assert_called_once()
+        self._assert_selected_config(read_state.call_args.args[0])
+
     def test_playback_next_endpoint_passes_player_context(self) -> None:
         report = PlaybackReport(status="ok", state=PlayerState(None, None, 2, is_playing=True, repeat_mode="album"))
 
@@ -232,6 +365,48 @@ class AppSmokeTest(unittest.TestCase):
         repeat.assert_called_once()
         self.assertEqual(response.json()["state"]["repeat_mode"], "track")
 
+    def test_speakers_endpoint_returns_selection_report(self) -> None:
+        report = SpeakerSelectionReport(
+            status="ok",
+            speakers=[
+                SpeakerDevice(
+                    stable_id="RINCON_1",
+                    name="Biuro",
+                    ip_address="192.0.2.10",
+                    model_name="Sonos Era 300",
+                )
+            ],
+            active_speaker=SpeakerDevice(
+                stable_id="RINCON_1",
+                name="Biuro",
+                ip_address="192.0.2.10",
+                model_name="Sonos Era 300",
+            ),
+        )
+
+        with patch("sonos_album_controller.main.get_speaker_selection", return_value=report):
+            response = self.client.get("/api/speakers")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "ok")
+        self.assertEqual(body["active_speaker"]["name"], "Biuro")
+        self.assertEqual(body["speakers"][0]["stable_id"], "RINCON_1")
+
+    def test_speaker_selection_endpoint_passes_stable_id(self) -> None:
+        report = SpeakerSelectionReport(
+            status="ok",
+            speakers=[],
+            active_speaker=SpeakerDevice(stable_id="RINCON_2", name="Salon", ip_address="192.0.2.11"),
+        )
+
+        with patch("sonos_album_controller.main.set_active_speaker", return_value=report) as set_active:
+            response = self.client.post("/api/speakers/active", json={"stable_id": "RINCON_2"})
+
+        self.assertEqual(response.status_code, 200)
+        set_active.assert_called_once()
+        self.assertEqual(response.json()["active_speaker"]["stable_id"], "RINCON_2")
+
     def test_frontend_is_served_from_backend(self) -> None:
         response = self.client.get("/")
 
@@ -253,6 +428,9 @@ class AppSmokeTest(unittest.TestCase):
         self.assertIn('id="album-sort-select"', html)
         self.assertIn('id="album-sort-direction-button"', html)
         self.assertIn('id="player-sync-status"', html)
+        self.assertIn('id="active-speaker-status"', html)
+        self.assertIn('id="speakers-list"', html)
+        self.assertIn('id="scan-speakers-button"', html)
         self.assertIn('id="missing-artist-filter-button"', html)
         self.assertIn('id="cache-status-chip"', html)
         self.assertIn('id="refresh-status-chip"', html)
@@ -276,6 +454,17 @@ class AppSmokeTest(unittest.TestCase):
         self.assertIn("function shouldRunPlaybackSync", script)
         self.assertIn('document.addEventListener("visibilitychange"', script)
         self.assertIn("function markLocalPlaybackAction", script)
+        self.assertIn("function renderSpeakers", script)
+        self.assertIn("function needsSpeakerSelection", script)
+        self.assertIn("function renderSpeakerRequiredLibraryState", script)
+        self.assertIn("showDiagnosticsPanel(true);", script)
+        self.assertIn("if (needsSpeakerSelection(speakerReport))", script)
+        self.assertIn("renderSpeakerRequiredLibraryState(speakerReport);", script)
+        self.assertIn("startPlaybackSync();", script)
+        self.assertIn('"/api/speakers"', script)
+        self.assertIn('"/api/speakers/scan"', script)
+        self.assertIn('postJson("/api/speakers/active"', script)
+        self.assertIn("function resetPlaybackForSpeakerChange", script)
         self.assertIn(
             'document.querySelector("#volume-control").addEventListener("input", () => {\n        markLocalPlaybackAction();',
             script,

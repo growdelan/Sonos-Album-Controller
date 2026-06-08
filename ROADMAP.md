@@ -840,7 +840,7 @@ Uwagi:
 
 ---
 
-## Milestone 16: Wybór aktywnego głośnika i cache per urządzenie (planned)
+## Milestone 16: Wybór aktywnego głośnika i cache per urządzenie (done)
 
 Cel:
 - zastąpić ręczną konfigurację stałego IP przepływem wykrycia i wyboru jednego aktywnego głośnika Sonos
@@ -861,7 +861,7 @@ Definition of Done:
 - zmiana aktywnego głośnika nie pauzuje, nie zatrzymuje i nie mutuje poprzedniego głośnika
 - istniejące endpointy albumów, szczegółu albumu, playbacku, pollingu playera i diagnostyki działają dla aktywnego głośnika
 - cache albumów jest rozdzielony per stabilny identyfikator głośnika albo równoważny bezpieczny klucz
-- `SONOS_SPEAKER_IP` pozostaje zgodnościowym fallbackiem albo jawnym override zgodnie z doprecyzowaną decyzją techniczną
+- `SONOS_SPEAKER_IP` pozostaje zgodnościowym jawnym override zapisanego wyboru
 - nie dodano nowych zależności, chyba że po Milestone 15 istnieje jawna decyzja techniczna uzasadniająca wyjątek
 
 Zakres:
@@ -907,10 +907,12 @@ Walidacja:
 Kontrakt sprintu:
 - wymagany przed implementacją: tak
 - najważniejsze walidacje: testy fake discovery i aktywnego wyboru, regresje istniejących endpointów, per-speaker cache, Browser smoke i manualny smoke realnego Sonosa
-- stop conditions: brak potwierdzonego stabilnego identyfikatora z Milestone 15, niejasny priorytet `SONOS_SPEAKER_IP`, niejasna semantyka `SONOS_CACHE_PATH` po rozdzieleniu cache, konieczność sterowania grupami albo wieloma głośnikami, albo potrzeba nowej zależności bez decyzji technicznej
+- stop conditions: brak potwierdzonego stabilnego identyfikatora z Milestone 15, konieczność sterowania grupami albo wieloma głośnikami, albo potrzeba nowej zależności bez decyzji technicznej
 
 Uwagi:
+- milestone zakończony po dwóch turach poprawek self-review, końcowym self-review bez problemów krytycznych, finalnej walidacji automatycznej oraz ręcznym smoke użytkownika potwierdzającym wybór głośnika i start muzyki
+- finalne walidacje po doprecyzowaniu użytkownika wykonano bez Node; testy przeglądarkowe oparto na wcześniejszym `@Browser` smoke oraz ręcznym potwierdzeniu użytkownika
 - milestone wynika z `prd/007-automatyczne-wykrywanie-glosnikow.md`
 - zakres ocenia się jako duży: zmiana dotyka konfiguracji, lokalnego stanu backendu, diagnostyki, albumów, cache, playbacku, pollingu i statycznego frontendu
-- TODO: Doprecyzować przed implementacją, czy `SONOS_SPEAKER_IP` ma zawsze wymuszać override zapisanego wyboru, czy działać tylko jako fallback przy braku zapisanego lub wykrytego aktywnego głośnika.
-- TODO: Doprecyzować przed implementacją, czy `SONOS_CACHE_PATH` ma wskazywać pojedynczy plik zgodności, czy katalog bazowy dla cache per głośnik.
+- Decyzja przed implementacją: `SONOS_SPEAKER_IP` wymusza ręczny override zapisanego wyboru i nie zapisuje nowego aktywnego głośnika z discovery.
+- Decyzja przed implementacją: domyślny cache aktywnego głośnika jest rozdzielony per `stable_id`, a `SONOS_CACHE_PATH` zachowuje semantykę dokładnej ścieżki pojedynczego pliku cache zgodności.

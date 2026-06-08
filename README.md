@@ -35,9 +35,11 @@ Komenda zwraca raport JSON z listą wykrytych głośników, stabilnym identyfika
 
 Aplikacja używa tych opcjonalnych zmiennych środowiskowych:
 
-- `SONOS_SPEAKER_IP` - stały adres IP głośnika Sonos Era 300.
+- `SONOS_SPEAKER_IP` - stały adres IP głośnika Sonos jako ręczny override discovery i zapisanego wyboru.
 - `SONOS_LOG_PATH` - ścieżka pliku logów; domyślnie `~/.sonos-album-controller/logs/app.log`.
-- `SONOS_CACHE_PATH` - ścieżka pliku cache albumów; domyślnie `~/.sonos-album-controller/cache/albums.json`.
+- `SONOS_CACHE_PATH` - zgodnościowy override dokładnej ścieżki pojedynczego pliku cache albumów. Bez tej zmiennej cache aktywnego głośnika jest rozdzielony per stabilny identyfikator pod `~/.sonos-album-controller/cache/speakers/<stable_id>/albums.json`.
+
+Bez `SONOS_SPEAKER_IP` backend wykrywa głośniki Sonos przez SoCo discovery, automatycznie zapisuje jedyny wykryty głośnik albo wymaga wyboru w panelu diagnostyki, gdy wykryto kilka urządzeń. Aktywny wybór jest zapisywany lokalnie poza repo w `~/.sonos-album-controller/speakers/active_speaker.json`.
 
 Endpointy:
 
@@ -55,6 +57,10 @@ Endpointy:
 - `POST /api/playback/mute` - ustawia mute/unmute.
 - `GET /api/diagnostics` - zwraca skonfigurowane IP, status połączenia, ostatni błąd i stan cache.
 - `POST /api/diagnostics/test-connection` - wykonuje test połączenia z Sonosem.
+- `GET /api/speakers` - zwraca listę wykrytych głośników i aktualny aktywny wybór.
+- `POST /api/speakers/scan` - wymusza ponowne skanowanie głośników Sonos.
+- `GET /api/speakers/active` - zwraca aktualny aktywny wybór głośnika.
+- `POST /api/speakers/active` - zapisuje aktywny głośnik po `stable_id`.
 
 Frontend biblioteki działa lokalnie na aktualnej odpowiedzi `/api/albums`: pozwala wyszukiwać albumy po tytule i artyście bez uwzględniania wielkości liter i znaków diakrytycznych, sortować po kolejności z API/Sonosa, tytule albo artyście, zawężać listę filtrem `bez artysty` oraz pokazuje chipy statusu cache i ostatniego odświeżenia. Stan tych kontrolek trwa tylko w bieżącej sesji strony i nie jest zapisywany w URL ani `localStorage`.
 

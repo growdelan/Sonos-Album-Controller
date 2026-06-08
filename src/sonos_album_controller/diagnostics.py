@@ -25,6 +25,9 @@ class DiagnosticsReport:
     last_error: str | None
     cache: CacheDiagnostics
     log_path: str
+    active_speaker_id: str | None = None
+    active_speaker_name: str | None = None
+    speaker_source: str | None = None
 
 
 def _cache_status(config: AppConfig) -> CacheDiagnostics:
@@ -47,6 +50,9 @@ def build_diagnostics(config: AppConfig) -> DiagnosticsReport:
             last_error=message,
             cache=_cache_status(config),
             log_path=str(config.log_path),
+            active_speaker_id=config.active_speaker_id,
+            active_speaker_name=config.active_speaker_name,
+            speaker_source=config.speaker_source,
         )
 
     return DiagnosticsReport(
@@ -55,6 +61,9 @@ def build_diagnostics(config: AppConfig) -> DiagnosticsReport:
         last_error=None,
         cache=_cache_status(config),
         log_path=str(config.log_path),
+        active_speaker_id=config.active_speaker_id,
+        active_speaker_name=config.active_speaker_name,
+        speaker_source=config.speaker_source,
     )
 
 
@@ -72,6 +81,9 @@ def test_sonos_connection(
             last_error=message,
             cache=_cache_status(config),
             log_path=str(config.log_path),
+            active_speaker_id=config.active_speaker_id,
+            active_speaker_name=config.active_speaker_name,
+            speaker_source=config.speaker_source,
         )
 
     try:
@@ -86,6 +98,9 @@ def test_sonos_connection(
             last_error=message,
             cache=_cache_status(config),
             log_path=str(config.log_path),
+            active_speaker_id=config.active_speaker_id,
+            active_speaker_name=config.active_speaker_name,
+            speaker_source=config.speaker_source,
         )
 
     return DiagnosticsReport(
@@ -94,6 +109,9 @@ def test_sonos_connection(
         last_error=None,
         cache=_cache_status(config),
         log_path=str(config.log_path),
+        active_speaker_id=config.active_speaker_id,
+        active_speaker_name=config.active_speaker_name,
+        speaker_source=config.speaker_source,
     )
 
 
