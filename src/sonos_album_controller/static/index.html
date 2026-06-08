@@ -24,6 +24,10 @@
                         <dt>Sonos</dt>
                         <dd id="sonos-status"><span class="status-dot" aria-hidden="true"></span>-</dd>
                     </div>
+                    <div class="status-pill active-speaker-pill">
+                        <dt>Aktywny</dt>
+                        <dd id="active-speaker-status"><span class="status-dot" aria-hidden="true"></span>-</dd>
+                    </div>
                 </dl>
                 <p id="last-refresh-label" class="last-refresh-label">Ostatnie odswiezenie: -</p>
                 <div class="actions" aria-label="Akcje aplikacji">
@@ -93,6 +97,10 @@
                 <h2 id="diagnostics-title">Diagnostyka</h2>
                 <dl class="diagnostics-grid">
                     <div>
+                        <dt>Aktywny glosnik</dt>
+                        <dd id="diagnostics-active-speaker">-</dd>
+                    </div>
+                    <div>
                         <dt>IP glosnika</dt>
                         <dd id="diagnostics-ip">-</dd>
                     </div>
@@ -109,6 +117,14 @@
                         <dd id="diagnostics-error">-</dd>
                     </div>
                 </dl>
+                <section class="speakers-panel" aria-labelledby="speakers-title">
+                    <div class="speakers-heading">
+                        <h3 id="speakers-title">Glosniki Sonos</h3>
+                        <button id="scan-speakers-button" class="secondary-button" type="button">Skanuj</button>
+                    </div>
+                    <p id="speakers-message" class="panel-message">Ladowanie listy glosnikow...</p>
+                    <div id="speakers-list" class="speakers-list" aria-live="polite"></div>
+                </section>
             </section>
         </section>
     </main>

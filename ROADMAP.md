@@ -783,3 +783,136 @@ Uwagi:
 - zakres ocenia się jako średni: zmiana dotyka backendowego playbacku, statycznego frontendu i realnej integracji z Sonosem, ale nie dodaje zależności, nie zmienia cache i nie przebudowuje biblioteki albumów
 - milestone zastępuje wcześniejsze ograniczenie braku aktywnej synchronizacji zmian zewnętrznych ograniczonym, read-only pollingiem playera
 - milestone zakończony po poprawkach self-review, końcowym pozytywnym self-review, automatycznej walidacji oraz ręcznym smoke na realnym Sonos Era 300
+
+---
+
+## Milestone 15: PoC discovery Sonos i stabilnej tożsamości urządzenia (done)
+
+Cel:
+- potwierdzić, czy istniejące SoCo wystarcza do wykrywania głośników Sonos w sieci lokalnej bez nowych zależności
+- ustalić stabilny identyfikator urządzenia, nazwę, model, IP i minimalne dane potrzebne do wyboru aktywnego głośnika
+- sprawdzić zachowanie discovery dla braku głośników, jednego głośnika, wielu głośników oraz potencjalnych grup Sonos
+- ograniczyć ryzyko sieciowe PRD 007 przed zmianą konfiguracji, cache i istniejących endpointów
+
+Definition of Done:
+- istnieje izolowana, stubowalna warstwa albo skrypt PoC discovery w strukturze projektu
+- PoC potrafi zwrócić kontrolowany raport `not_found` albo pustą listę bez realnego Sonosa
+- PoC potrafi opisać wykryte urządzenia polami: stabilny identyfikator, nazwa, aktualny IP, model albo krótki wyróżnik
+- ręczny smoke z realną siecią lokalną potwierdza, czy SoCo wykrywa co najmniej jednego Sonosa bez `SONOS_SPEAKER_IP`
+- wynik PoC dokumentuje, które pole jest stabilnym identyfikatorem i czy nadaje się do zapamiętania wyboru po zmianie IP
+- wynik PoC dokumentuje ograniczenia multicast/SSDP, zachowanie dla grup jeśli da się je zaobserwować oraz konsekwencje dla implementacji Milestone 16
+- nie zmieniono publicznych endpointów albumów, playbacku, diagnostyki ani cache produkcyjnego
+
+Zakres:
+- mały, izolowany PoC discovery oparty preferencyjnie o istniejące SoCo
+- fake discovery albo testy jednostkowe bez realnego Sonosa i bez skanowania prawdziwej sieci
+- ręczny smoke w sieci lokalnej, jeśli urządzenie jest dostępne
+- dokumentacja wyniku PoC w `STATUS.md` oraz ewentualne doprecyzowanie decyzji technicznych w `spec.md`
+
+Poza zakresem:
+- UI wyboru głośnika
+- trwały zapis aktywnego wyboru
+- automatyczny wybór jedynego głośnika
+- integracja aktywnego głośnika z albumami, diagnostyką i playbackiem
+- migracja albo rozdzielenie cache albumów
+- nowe zależności, jeśli SoCo wystarczy
+- sterowanie grupami albo wieloma głośnikami
+
+Walidacja:
+- `uv run python -m unittest discover -s tests -p "test_*.py"`
+- `uv run python -m py_compile` dla nowych modułów PoC/discovery
+- `git diff --check`
+- test fake discovery dla braku głośników
+- test fake discovery dla jednego i wielu głośników
+- test normalizacji danych urządzenia: stabilny identyfikator, nazwa, IP, model/wyróżnik
+- ręczny smoke bez `SONOS_SPEAKER_IP`: wykrycie realnego Sonosa albo kontrolowany opis ograniczenia sieci
+
+Kontrakt sprintu:
+- wymagany przed implementacją: tak
+- najważniejsze walidacje: fake discovery bez IO, ręczny smoke realnej sieci, zapis wyniku stabilnego identyfikatora
+- stop conditions: SoCo nie udostępnia stabilnego identyfikatora, discovery wymaga nowej zależności bez decyzji technicznej, sieć lokalna blokuje discovery i nie da się zwalidować wymaganej ścieżki ręcznie
+
+Uwagi:
+- milestone wynika z `prd/007-automatyczne-wykrywanie-glosnikow.md`
+- zakres ocenia się jako mały technicznie, ale wysokiego ryzyka integracyjnego przez zależność od SSDP/multicast i konfiguracji sieci
+- wynik tego milestone’u warunkuje bezpieczne wejście w Milestone 16
+- milestone zakończony po poprawkach self-review, pozytywnym ponownym self-review, automatycznej walidacji oraz ręcznym smoke realnej sieci bez `SONOS_SPEAKER_IP`
+
+---
+
+## Milestone 16: Wybór aktywnego głośnika i cache per urządzenie (done)
+
+Cel:
+- zastąpić ręczną konfigurację stałego IP przepływem wykrycia i wyboru jednego aktywnego głośnika Sonos
+- zapamiętać aktywny wybór lokalnie po stabilnym identyfikatorze urządzenia i automatycznie używać go przy kolejnym starcie
+- zintegrować aktywny głośnik z istniejącymi przepływami albumów, diagnostyki, playbacku i pollingu playera
+- rozdzielić cache albumów per aktywny głośnik, aby nie mieszać bibliotek urządzeń
+
+Definition of Done:
+- backend udostępnia API odczytu listy wykrytych głośników, wymuszenia ponownego skanowania, odczytu aktualnie wybranego głośnika i zapisania aktywnego głośnika
+- dane głośnika w API zawierają stabilny identyfikator, nazwę, aktualny IP, status dostępności i opcjonalny wyróżnik dla duplikatów nazw
+- przy pierwszym uruchomieniu dokładnie jeden wykryty głośnik jest wybierany automatycznie i zapisywany
+- przy pierwszym uruchomieniu z wieloma wykrytymi głośnikami UI wymaga wyboru użytkownika
+- brak wykrytych głośników pokazuje kontrolowany stan, przycisk ponownego skanowania i informację o ręcznym `SONOS_SPEAKER_IP`
+- zapisany wybór przetrwa restart backendu i dopasowuje ten sam głośnik po stabilnym identyfikatorze mimo zmiany IP
+- header pokazuje nazwę aktywnego głośnika i lekki status bez dominowania music-first UI
+- diagnostyka albo ustawienia pokazują listę głośników, aktywny wybór, status dostępności i przycisk ponownego skanowania
+- zmiana aktywnego głośnika zapisuje nowy wybór, przeładowuje bibliotekę, diagnostykę i player dla nowego urządzenia
+- zmiana aktywnego głośnika nie pauzuje, nie zatrzymuje i nie mutuje poprzedniego głośnika
+- istniejące endpointy albumów, szczegółu albumu, playbacku, pollingu playera i diagnostyki działają dla aktywnego głośnika
+- cache albumów jest rozdzielony per stabilny identyfikator głośnika albo równoważny bezpieczny klucz
+- `SONOS_SPEAKER_IP` pozostaje zgodnościowym jawnym override zapisanego wyboru
+- nie dodano nowych zależności, chyba że po Milestone 15 istnieje jawna decyzja techniczna uzasadniająca wyjątek
+
+Zakres:
+- backendowa warstwa aktywnego wyboru urządzenia i lokalny plik wyboru poza repo w stylu `~/.sonos-album-controller/`
+- endpointy discovery/skanowania/wyboru aktywnego głośnika
+- integracja aktywnego głośnika z istniejącym adapterem Sonos, diagnostyką, albumami, szczegółem albumu, playbackiem i `GET /api/playback/state`
+- rozdzielenie cache albumów per aktywny głośnik
+- statyczny frontend HTML/CSS/vanilla JavaScript: status aktywnego głośnika w headerze, lista głośników w diagnostyce albo ustawieniach, przycisk skanowania, wybór aktywnego urządzenia i stany puste/błędów
+- testy automatyczne na fake discovery i fake adapterach bez realnego Sonosa
+- Browser smoke oraz manualny smoke z realnym Sonosem
+
+Poza zakresem:
+- sterowanie wieloma głośnikami naraz
+- wybór kilku głośników w UI
+- zarządzanie grupami Sonos
+- automatyczne grupowanie, rozgrupowanie albo przenoszenie odtwarzania
+- pauzowanie, zatrzymywanie albo mutowanie poprzedniego głośnika przy zmianie aktywnego wyboru
+- obsługa playlist, radia albo pojedynczych utworów jako nowych źródeł
+- oficjalne Sonos Control API, OAuth albo chmura Sonos
+- WebSocket/SSE albo stały kanał push
+- przebudowa premium UI poza elementami wyboru głośnika
+- nowe zależności bez wyniku Milestone 15 i wpisu w `spec.md`
+
+Walidacja:
+- `uv run python -m unittest discover -s tests -p "test_*.py"`
+- `node --check src/sonos_album_controller/static/app.js`
+- `uv run python -m py_compile` dla zmienionych modułów backendu
+- `git diff --check`
+- test discovery bez realnego Sonosa dla braku głośników
+- test jednego wykrytego głośnika i automatycznego wyboru
+- test wielu wykrytych głośników i wymagania wyboru użytkownika
+- test zapisu oraz odczytu aktywnego głośnika z lokalnego pliku
+- test dopasowania zapamiętanego głośnika po stabilnym ID mimo zmiany IP
+- test fallbacku albo override przez `SONOS_SPEAKER_IP`
+- test rozdzielenia cache albumów per głośnik
+- test, że zmiana aktywnego głośnika nie wykonuje komend pauzy, stopu ani mute na poprzednim głośniku
+- test endpointów wyboru i skanowania na fake discovery
+- testy regresyjne albumów, diagnostyki, playbacku i pollingu playera z aktywnym głośnikiem
+- test statyczny frontendu dla headera aktywnego głośnika, listy głośników i przycisku skanowania
+- Browser smoke: header aktywnego głośnika, lista głośników, ręczne skanowanie, wybór urządzenia, brak głośników, duplikaty nazw i brak poziomego overflow
+- manualny smoke z realnym Sonosem: uruchomienie bez `SONOS_SPEAKER_IP`, wykrycie urządzenia, wybór, restart aplikacji, albumy, diagnostyka, start playbacku i polling playera na aktywnym głośniku; jeśli dostępne są co najmniej dwa Sonosy, przełączenie aktywnego głośnika bez zatrzymania poprzedniego
+
+Kontrakt sprintu:
+- wymagany przed implementacją: tak
+- najważniejsze walidacje: testy fake discovery i aktywnego wyboru, regresje istniejących endpointów, per-speaker cache, Browser smoke i manualny smoke realnego Sonosa
+- stop conditions: brak potwierdzonego stabilnego identyfikatora z Milestone 15, konieczność sterowania grupami albo wieloma głośnikami, albo potrzeba nowej zależności bez decyzji technicznej
+
+Uwagi:
+- milestone zakończony po dwóch turach poprawek self-review, końcowym self-review bez problemów krytycznych, finalnej walidacji automatycznej oraz ręcznym smoke użytkownika potwierdzającym wybór głośnika i start muzyki
+- finalne walidacje po doprecyzowaniu użytkownika wykonano bez Node; testy przeglądarkowe oparto na wcześniejszym `@Browser` smoke oraz ręcznym potwierdzeniu użytkownika
+- milestone wynika z `prd/007-automatyczne-wykrywanie-glosnikow.md`
+- zakres ocenia się jako duży: zmiana dotyka konfiguracji, lokalnego stanu backendu, diagnostyki, albumów, cache, playbacku, pollingu i statycznego frontendu
+- Decyzja przed implementacją: `SONOS_SPEAKER_IP` wymusza ręczny override zapisanego wyboru i nie zapisuje nowego aktywnego głośnika z discovery.
+- Decyzja przed implementacją: domyślny cache aktywnego głośnika jest rozdzielony per `stable_id`, a `SONOS_CACHE_PATH` zachowuje semantykę dokładnej ścieżki pojedynczego pliku cache zgodności.

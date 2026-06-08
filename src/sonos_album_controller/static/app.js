@@ -31,6 +31,10 @@ const libraryState = {
     missingArtistOnly: false,
 };
 
+const speakerState = {
+    report: null,
+};
+
 async function loadStatus() {
     const message = document.querySelector("#status-message");
     const backendStatus = document.querySelector("#backend-status");
@@ -46,11 +50,19 @@ async function loadStatus() {
         message.textContent = status.message;
         setStatusPill(backendStatus, status.status);
         setStatusPill(sonosStatus, status.sonos_integration);
+        renderActiveSpeakerStatus(status.active_speaker);
     } catch (error) {
         message.textContent = "Nie udalo sie pobrac statusu aplikacji.";
         setStatusPill(backendStatus, "error");
         setStatusPill(sonosStatus, "unknown");
+        renderActiveSpeakerStatus(null);
     }
+}
+
+function renderActiveSpeakerStatus(activeSpeaker) {
+    const target = document.querySelector("#active-speaker-status");
+    const label = activeSpeaker && activeSpeaker.name ? activeSpeaker.name : "Wybierz";
+    setStatusPill(target, activeSpeaker && activeSpeaker.ip_address ? label : "not_configured");
 }
 
 function setStatusPill(target, value) {
@@ -434,6 +446,14 @@ function resetPlayerState() {
     updatePlayerContext();
     updateActiveTrack();
     updateProgressDisplay(0);
+}
+
+function resetPlaybackForSpeakerChange() {
+    playerState.album = null;
+    playerState.tracks = [];
+    playerState.loadedQueueAlbumId = null;
+    resetPlayerState();
+    renderTracks([], null);
 }
 
 function normalizedTrackValue(value) {
@@ -1339,12 +1359,132 @@ function renderAlbumSkeletons() {
 
 function renderDiagnostics(diagnostics) {
     showDiagnosticsPanel(true);
+    document.querySelector("#diagnostics-active-speaker").textContent = diagnostics.active_speaker_name
+        ? `${diagnostics.active_speaker_name}${diagnostics.speaker_source === "manual" ? " (recznie)" : ""}`
+        : "Wymaga wyboru";
     document.querySelector("#diagnostics-ip").textContent = diagnostics.configured_ip || "Nie skonfigurowano";
     document.querySelector("#diagnostics-connection").textContent = diagnostics.connection_status;
     document.querySelector("#diagnostics-cache").textContent = diagnostics.cache.available
         ? `Dostepny${diagnostics.cache.last_refresh ? ` (${diagnostics.cache.last_refresh})` : ""}`
         : "Niedostepny";
     document.querySelector("#diagnostics-error").textContent = diagnostics.last_error || "Brak";
+}
+
+function hasActiveSpeaker(report) {
+    return Boolean(report && report.active_speaker && report.active_speaker.ip_address);
+}
+
+function needsSpeakerSelection(report) {
+    return !hasActiveSpeaker(report);
+}
+
+function renderSpeakerRequiredLibraryState(report) {
+    renderAlbums({
+        status: "not_configured",
+        albums: [],
+        message: report && report.message
+            ? report.message
+            : "Wybierz aktywny glosnik Sonos, aby pobrac biblioteke.",
+    });
+}
+
+function speakerLabel(speaker) {
+    if (!speaker) {
+        return "Sonos";
+    }
+    return speaker.display_suffix ? `${speaker.name} (${speaker.display_suffix})` : speaker.name;
+}
+
+function renderSpeakers(report) {
+    speakerState.report = report;
+    const message = document.querySelector("#speakers-message");
+    const list = document.querySelector("#speakers-list");
+    const active = report.active_speaker || null;
+    const speakers = Array.isArray(report.speakers) ? report.speakers : [];
+
+    renderActiveSpeakerStatus(active);
+    list.replaceChildren();
+
+    if (report.status === "manual_override") {
+        setPanelMessage(message, report.message || "Aktywny jest reczny SONOS_SPEAKER_IP.", "warning");
+    } else if (report.status === "not_found" || speakers.length === 0) {
+        showDiagnosticsPanel(true);
+        setPanelMessage(message, report.message || "Nie wykryto glosnikow Sonos.", "warning");
+        return;
+    } else if (report.status === "error") {
+        showDiagnosticsPanel(true);
+        setPanelMessage(message, report.message || "Nie udalo sie przeskanowac sieci.", "error");
+        return;
+    } else if (report.status === "needs_selection" || report.status === "saved_missing") {
+        showDiagnosticsPanel(true);
+        setPanelMessage(message, report.message || "Wybierz aktywny glosnik.", "warning");
+    } else {
+        setPanelMessage(message, active ? `Aktywny glosnik: ${speakerLabel(active)}.` : "");
+    }
+
+    speakers.forEach((speaker) => {
+        const isActive = active && speaker.stable_id === active.stable_id;
+        const item = document.createElement("div");
+        item.className = "speaker-item";
+        item.classList.toggle("is-active", Boolean(isActive));
+
+        const copy = document.createElement("div");
+        const title = document.createElement("h4");
+        title.textContent = speakerLabel(speaker);
+        const meta = document.createElement("p");
+        meta.textContent = [
+            speaker.ip_address,
+            speaker.model_name,
+            speaker.available ? "Dostepny" : "Niedostepny",
+        ].filter(Boolean).join(" / ");
+        copy.append(title, meta);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = isActive ? "ghost-button" : "secondary-button";
+        button.textContent = isActive ? "Aktywny" : "Wybierz";
+        button.disabled = Boolean(isActive) || report.status === "manual_override";
+        button.addEventListener("click", () => chooseSpeaker(speaker.stable_id));
+
+        item.append(copy, button);
+        list.appendChild(item);
+    });
+}
+
+async function loadSpeakers(scan = false) {
+    const message = document.querySelector("#speakers-message");
+    setPanelMessage(message, scan ? "Skanowanie glosnikow Sonos..." : "Ladowanie listy glosnikow...");
+    try {
+        const response = await fetch(scan ? "/api/speakers/scan" : "/api/speakers", {
+            method: scan ? "POST" : "GET",
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const report = await response.json();
+        renderSpeakers(report);
+        return report;
+    } catch (error) {
+        setPanelMessage(message, "Nie udalo sie pobrac listy glosnikow.", "error");
+        renderActiveSpeakerStatus(null);
+        return null;
+    }
+}
+
+async function chooseSpeaker(stableId) {
+    const message = document.querySelector("#speakers-message");
+    setPanelMessage(message, "Zapisywanie aktywnego glosnika...", "pending");
+    try {
+        const report = await postJson("/api/speakers/active", { stable_id: stableId });
+        renderSpeakers(report);
+        resetPlaybackForSpeakerChange();
+        await loadStatus();
+        await loadDiagnostics();
+        await loadAlbums(true);
+        startPlaybackSync();
+    } catch (error) {
+        setPanelMessage(message, error.message || "Nie udalo sie zapisac aktywnego glosnika.", "error");
+    }
 }
 
 async function loadDiagnostics() {
@@ -1357,6 +1497,7 @@ async function loadDiagnostics() {
         }
 
         renderDiagnostics(await response.json());
+        await loadSpeakers();
     } catch (error) {
         errorTarget.textContent = "Nie udalo sie pobrac diagnostyki.";
     }
@@ -1376,6 +1517,7 @@ async function testConnection() {
         }
 
         renderDiagnostics(await response.json());
+        await loadSpeakers();
     } catch (error) {
         connectionTarget.textContent = "error";
         errorTarget.textContent = "Nie udalo sie wykonac testu polaczenia.";
@@ -1430,7 +1572,7 @@ async function toggleRepeatMode() {
     }
 }
 
-function initializeApp() {
+async function initializeApp() {
     document.querySelector("#refresh-albums-button").addEventListener("click", () => loadAlbums(true));
     document.querySelector("#diagnostics-button").addEventListener("click", () => {
         if (document.querySelector("#diagnostics-panel").hidden) {
@@ -1440,6 +1582,7 @@ function initializeApp() {
         }
     });
     document.querySelector("#connection-test-button").addEventListener("click", testConnection);
+    document.querySelector("#scan-speakers-button").addEventListener("click", () => loadSpeakers(true));
     document.querySelector("#back-to-albums-button").addEventListener("click", showAlbumsView);
     document.querySelector("#previous-control-button").addEventListener("click", playPreviousTrack);
     document.querySelector("#play-pause-control-button").addEventListener("click", togglePlaybackState);
@@ -1479,8 +1622,15 @@ function initializeApp() {
     updateProgressDisplay(0);
     updateLibraryControls();
     updateLibraryStatusChips();
-    loadStatus();
-    loadAlbums();
+    await loadStatus();
+    const speakerReport = await loadSpeakers();
+    await loadStatus();
+    if (needsSpeakerSelection(speakerReport)) {
+        showDiagnosticsPanel(true);
+        renderSpeakerRequiredLibraryState(speakerReport);
+        return;
+    }
+    await loadAlbums();
     startPlaybackSync();
 }
 
