@@ -11,8 +11,8 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Aktualny milestone / batch
 
-- Aktualny milestone: Milestone 16 - Wybór aktywnego głośnika i cache per urządzenie
-- Status: zakończony po poprawkach self-review, końcowym self-review, finalnej walidacji i ręcznym smoke użytkownika; gotowy do commita i pusha
+- Aktualny milestone: brak aktywnej implementacji po zakończeniu Milestone 16
+- Status: Milestone 16 zakończony po poprawkach self-review, końcowym self-review, finalnej walidacji, ręcznym smoke użytkownika, commicie `46e5895` i pushu na `origin/codex/wykrywanie-glosnikow`
 - Kontrakt sprintu: ustalony przed implementacją; profil `openai_patch`, format patch/diff przez `apply_patch`; model switch: nie
 - Zakres poza Milestone 16: sterowanie wieloma głośnikami naraz, zarządzanie grupami, automatyczne przenoszenie odtwarzania, WebSocket/SSE, nowe zależności, obsługa nowych typów źródeł muzyki
 
@@ -71,16 +71,17 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Co jest w trakcie
 
-- Brak aktywnego milestone'u implementacyjnego. Trwa finalizacja operacyjna Milestone 16: dokumentacja, commit i push.
+- Brak aktywnego milestone'u implementacyjnego; Milestone 16 jest zakończony, zapisany w commicie `46e5895` i wypchnięty na `origin/codex/wykrywanie-glosnikow`.
 
 ## Co jest następne
 
-- Po pushu Milestone 16 rozpocząć kolejny milestone z `ROADMAP.md` dopiero po ustaleniu nowego kontraktu sprintu.
+- Rozpocząć kolejny milestone z `ROADMAP.md` dopiero po ustaleniu nowego kontraktu sprintu.
 
 ## Walidacja
 
 | Data | Zakres | Komenda / sposób | Wynik | Uwagi |
 |---|---|---|---|---|
+| 2026-06-08 | Wrap-up po finalizacji Milestone 16 | `git status --short --branch`; `git log -3 --oneline --decorate`; `rg -n "Milestone 16\|46e5895\|origin/codex/wykrywanie-glosnikow" STATUS.md ROADMAP.md README.md` | PASS | Gałąź `codex/wykrywanie-glosnikow` śledzi `origin/codex/wykrywanie-glosnikow`; commit implementacyjno-operacyjny `46e5895` jest wypchnięty. Wrap-up aktualizuje wyłącznie dokumentację operacyjną. |
 | 2026-06-08 | Finalizacja Milestone 16 | Końcowy self-review; ręczny smoke użytkownika; `uv run python -m unittest discover -s tests -p "test_*.py"`; `uv run python -m py_compile src/sonos_album_controller/*.py`; `git diff --check` | PASS | Self-review zakończony bez problemów krytycznych. Użytkownik potwierdził manualnie, że aplikacja pozwala wybrać głośnik przyciskiem i uruchamia muzykę. Finalne walidacje wykonano bez Node. |
 | 2026-06-08 | Poprawka UX wyboru głośnika po zgłoszeniu użytkownika | `curl -sS http://127.0.0.1:8000/api/speakers`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `uv run python -m py_compile src/sonos_album_controller/*.py`; `git diff --check`; `curl -sS http://127.0.0.1:8000/static/app.js \| rg "needsSpeakerSelection\|renderSpeakerRequiredLibraryState"` | PASS | Backend wykrywał 2 głośniki, ale lista wyboru była schowana w diagnostyce, a biblioteka ładowała stare dane z cache mimo braku aktywnego wyboru. Frontend po poprawce automatycznie pokazuje panel wyboru i nie ładuje biblioteki ani pollingu przed wyborem aktywnego głośnika. 110 testów pełnych PASS. Nie używano Node ani Browser przez Node. |
 | 2026-06-08 | Druga tura poprawek po self-review Milestone 16 | `uv run python -m unittest discover -s tests -p "test_*.py"`; `uv run python -m py_compile src/sonos_album_controller/*.py`; `git diff --check` | PASS | 110 testów pełnych PASS. Dodano procesowy cache aktywnej konfiguracji: pierwszy zwykły endpoint po starcie procesu odświeża zapisany wybór przez discovery i aktualizuje IP po `stable_id`, a kolejne wywołania używają cache dopóki plik wyboru się nie zmieni. Nie używano Node ani testów przeglądarkowych w tej fazie. |
@@ -293,11 +294,12 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 - Najkrótsze streszczenie stanu: PRD bazowy został przepisany na `spec.md` i `ROADMAP.md`; Milestone 0.5 ma minimalną aplikację FastAPI, Milestone 1 ma zakończony izolowany PoC SoCo z raportem JSON, Milestone 2 ma zakończoną diagnostykę z poprawką loggera po self-review, Milestone 3 ma zakończony endpoint albumów i ekran główny po pozytywnym self-review, Milestone 4 ma zakończony cache albumów i odświeżanie danych po pozytywnym self-review, Milestone 5 ma zakończony widok albumu i player bez odtwarzania, Milestone 6 ma zakończony playback z fallbackiem `AddURIToQueue` i odczytem tracklisty z kolejki Sonosa po starcie albumu, Milestone 7 ma zakończone tryby pętli i lokalny pasek postępu po pozytywnym self-review, Milestone 8 ma zakończony neutralny badge jakości audio, nietechniczne błędy/logi i ciemne polerowanie UI MVP po pozytywnym self-review, Milestone 9 ma zakończony premium music-first frontend, Milestone 10 ma zakończony wybór widocznej piosenki z tracklisty i wskaźnik grania aktywnego utworu, Milestone 11 ma zakończone wzbogacanie artystów albumów przez Apple/iTunes lookup, Milestone 12 ma zakończone wzbogacanie metadata `AddURIToQueue` o `albumArtURI`, Milestone 13 ma zakończone lokalne wyszukiwanie/sortowanie/filtrowanie biblioteki oraz finalnie wypolerowany toolbar wyszukiwania po uwadze wizualnej, Milestone 14 ma zakończony i wypchnięty read-only `GET /api/playback/state` oraz polling playera, Milestone 15 ma zakończony PoC discovery Sonos, a Milestone 16 ma zakończony wybór aktywnego głośnika i cache per urządzenie po poprawkach self-review, końcowym review i ręcznym smoke użytkownika.
 - Decyzje, których nie wolno zgubić: FastAPI + SoCo, statyczny frontend HTML/CSS/vanilla JS, aplikacja steruje jednym aktywnym głośnikiem naraz, `SONOS_SPEAKER_IP` jest jawnym ręcznym override zapisanego wyboru, domyślny cache albumów jest per `stable_id`, `SONOS_CACHE_PATH` pozostaje dokładną ścieżką pojedynczego pliku zgodności, jakość audio best effort, testy automatyczne bez realnego Sonosa.
 - Pliki, które warto doczytać jako pierwsze: `AGENTS.md`, `STATUS.md`, `spec.md`, `ROADMAP.md`, `prd/007-automatyczne-wykrywanie-glosnikow.md`, `src/sonos_album_controller/device_selection.py`, `src/sonos_album_controller/main.py`, `tests/test_device_selection.py`, `tests/test_app_smoke.py`, `README.md`.
-- Następny bezpieczny krok: po pushu Milestone 16 wybrać kolejny milestone z `ROADMAP.md` i zacząć od kontraktu sprintu.
+- Następny bezpieczny krok: wybrać kolejny milestone z `ROADMAP.md` i zacząć od kontraktu sprintu.
 - Czego nie robić: nie dodawać sterowania grupami, wielu aktywnych głośników ani nowych zależności bez osobnego milestone'u i decyzji technicznej.
 
 ## Ostatnie aktualizacje
 
+- 2026-06-08: Wrap-up po finalizacji Milestone 16 potwierdził, że gałąź `codex/wykrywanie-glosnikow` śledzi `origin/codex/wykrywanie-glosnikow`, a commit implementacyjny `46e5895` został wypchnięty.
 - 2026-06-08: Końcowy self-review Milestone 16 zakończył się bez problemów krytycznych; użytkownik potwierdził manualnie wybór głośnika i start muzyki, a dokumentacja operacyjna została przygotowana do finalizacji, commita i pusha.
 - 2026-06-08: Zaimplementowano i sfinalizowano Milestone 15: izolowany PoC discovery Sonos przez SoCo, testy fake discovery, dokumentację uruchomienia i ręczny smoke realnej sieci bez `SONOS_SPEAKER_IP`; commit `272d18c` został wypchnięty na `origin/codex/wykrywanie-glosnikow`.
 - 2026-06-08: Po zgłoszeniu użytkownika poprawiono UX M16: jeśli backend wykrywa głośniki, ale nie ma aktywnego wyboru, frontend automatycznie pokazuje panel wyboru i blokuje ładowanie biblioteki/pollingu do czasu wyboru głośnika.
