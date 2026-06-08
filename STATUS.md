@@ -12,7 +12,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 ## Aktualny milestone / batch
 
 - Aktualny milestone: brak aktywnej implementacji po zakończeniu Milestone 15
-- Status: Milestone 15 zakończony po poprawkach self-review, pozytywnym ponownym self-review, automatycznej walidacji i ręcznym smoke realnej sieci lokalnej bez `SONOS_SPEAKER_IP`
+- Status: Milestone 15 zakończony po poprawkach self-review, pozytywnym ponownym self-review, automatycznej walidacji, ręcznym smoke realnej sieci lokalnej bez `SONOS_SPEAKER_IP`, commicie `272d18c` i pushu na `origin/codex/wykrywanie-glosnikow`
 - Kontrakt sprintu: ustalony przed implementacją; profil `openai_patch`, format patch/diff przez `apply_patch`; model switch: nie
 - Zakres poza Milestone 15: UI wyboru głośnika, trwały aktywny wybór, automatyczny wybór jedynego głośnika, integracja aktywnego głośnika z albumami/diagnostyką/playbackiem, migracja albo rozdzielenie cache albumów, nowe zależności, sterowanie grupami albo wieloma głośnikami
 
@@ -67,7 +67,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 ## Co jest w trakcie
 
-- Brak aktywnej implementacji; Milestone 15 jest zakończony lokalnie i przygotowany do commita/pusha.
+- Brak aktywnej implementacji; Milestone 15 jest zakończony, zapisany w commicie `272d18c` i wypchnięty na `origin/codex/wykrywanie-glosnikow`.
 
 ## Co jest następne
 
@@ -77,8 +77,9 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 | Data | Zakres | Komenda / sposób | Wynik | Uwagi |
 |---|---|---|---|---|
+| 2026-06-08 | Wrap-up po finalizacji Milestone 15 | `git status --short --branch`; `git log -3 --oneline --decorate`; `rg -n "Milestone 15\|origin/codex/wykrywanie-glosnikow" STATUS.md ROADMAP.md README.md` | PASS | Gałąź `codex/wykrywanie-glosnikow` śledzi `origin/codex/wykrywanie-glosnikow`; commit implementacyjno-operacyjny `272d18c` jest wypchnięty. Wrap-up aktualizuje wyłącznie dokumentację operacyjną. |
 | 2026-06-08 | Milestone 15 implementacja lokalna | `uv run python -m unittest tests.test_sonos_discovery_poc`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `uv run python -m py_compile src/sonos_album_controller/sonos_discovery_poc.py`; `git diff --check`; `env -u SONOS_SPEAKER_IP PYTHONPATH=src uv run python -m sonos_album_controller.sonos_discovery_poc` | PASS | Po poprawkach self-review: 8 testów discovery i 94 testy pełne PASS; `py_compile` i `git diff --check` PASS. Ręczny smoke bez `SONOS_SPEAKER_IP` wykrył 2 głośniki: Sonos Ray `Biuro` pod `192.168.0.188` ze stabilnym ID `RINCON_F0F6C1F0F1EF01400` oraz Sonos Era 300 `Biuro Era` pod `192.168.0.172` ze stabilnym ID `RINCON_F0F6C1CBB45A01400`; oba są koordynatorami swoich grup, a SoCo zwróciło `group_uid` i `coordinator_uid`. |
-| 2026-06-08 | Finalizacja Milestone 15 | Ponowny self-review; `uv run python -m unittest tests.test_sonos_discovery_poc`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `uv run python -m py_compile src/sonos_album_controller/sonos_discovery_poc.py`; `git diff --check`; kontrola `git status --short --branch` | PASS | Ponowny self-review zakończony bez problemów krytycznych. 8 testów discovery i 94 testy pełne PASS przed commitem. Finalizacja aktualizuje wyłącznie dokumentację operacyjną przed commitem i pushem. |
+| 2026-06-08 | Finalizacja Milestone 15 | Ponowny self-review; `uv run python -m unittest tests.test_sonos_discovery_poc`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `uv run python -m py_compile src/sonos_album_controller/sonos_discovery_poc.py`; `git diff --check`; kontrola `git status --short --branch`; `git push origin codex/wykrywanie-glosnikow` | PASS | Ponowny self-review zakończony bez problemów krytycznych. 8 testów discovery i 94 testy pełne PASS przed commitem. Commit `272d18c` został wypchnięty na `origin/codex/wykrywanie-glosnikow`. |
 | 2026-05-31 | Wrap-up po finalizacji Milestone 14 | `git status --short --branch`; `git log -3 --oneline --decorate`; `git diff --check` | PASS | Gałąź `codex/synchronizacja` śledzi `origin/codex/synchronizacja`; commit implementacyjny `da2e573` jest wypchnięty. Wrap-up aktualizuje wyłącznie dokumentację operacyjną. |
 | 2026-05-31 | Push Milestone 14 | `git push -u origin codex/synchronizacja` | PASS | Gałąź `codex/synchronizacja` została utworzona na `origin` i ustawiona jako upstream; commit implementacyjny: `da2e573`. |
 | 2026-05-31 | Finalizacja Milestone 14 | `node --check src/sonos_album_controller/static/app.js`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; końcowy self-review | PASS | 86 testów pełnych PASS; końcowy self-review zakończony bez problemów krytycznych; manualny smoke P2/P3 potwierdzony przez użytkownika na realnym Sonos Era 300. |
@@ -278,8 +279,8 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 
 ## Ostatnie aktualizacje
 
-- 2026-06-08: Zaimplementowano lokalnie Milestone 15: izolowany PoC discovery Sonos przez SoCo, testy fake discovery, dokumentację uruchomienia i ręczny smoke realnej sieci bez `SONOS_SPEAKER_IP`; zmiana oczekuje na self-review.
-- 2026-06-08: Ponowny self-review Milestone 15 po poprawkach zakończył się bez problemów krytycznych; roadmapa i status zostały przygotowane do commita i pusha.
+- 2026-06-08: Zaimplementowano i sfinalizowano Milestone 15: izolowany PoC discovery Sonos przez SoCo, testy fake discovery, dokumentację uruchomienia i ręczny smoke realnej sieci bez `SONOS_SPEAKER_IP`; commit `272d18c` został wypchnięty na `origin/codex/wykrywanie-glosnikow`.
+- 2026-06-08: Ponowny self-review Milestone 15 po poprawkach zakończył się bez problemów krytycznych; wrap-up potwierdza czysty stan gałęzi po pushu.
 - 2026-05-31: Wrap-up po finalizacji Milestone 14 potwierdził, że gałąź `codex/synchronizacja` śledzi `origin/codex/synchronizacja`, a commit implementacyjny `da2e573` został wypchnięty.
 - 2026-05-31: Końcowy self-review Milestone 14 zakończył się bez problemów krytycznych; dokumentacja operacyjna została przygotowana do finalizacji, commita i pusha.
 - 2026-05-31: Po ponownym self-review Milestone 14 poprawiono odporność snapshotu na błędy opcjonalnych właściwości SoCo, ochronę lokalnego `input` volume przed pollingiem oraz uzupełniono walidację w `STATUS.md`.
