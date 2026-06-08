@@ -21,6 +21,16 @@ PYTHONPATH=src uv run python -m sonos_album_controller.sonos_poc
 
 Bez `SONOS_SPEAKER_IP` komenda zwraca raport `not_configured`, bez próby połączenia z realnym Sonosem.
 
+## PoC discovery Sonos
+
+PoC discovery sprawdza, czy SoCo potrafi wykryć głośniki Sonos w lokalnej sieci bez ręcznie podanego IP:
+
+```bash
+PYTHONPATH=src uv run python -m sonos_album_controller.sonos_discovery_poc
+```
+
+Komenda zwraca raport JSON z listą wykrytych głośników, stabilnym identyfikatorem jeśli SoCo go udostępnia, nazwą, IP, modelem i podstawową informacją o grupie. Jeśli discovery niczego nie wykryje, zwraca kontrolowany status `not_found`.
+
 ## Konfiguracja i diagnostyka
 
 Aplikacja używa tych opcjonalnych zmiennych środowiskowych:
