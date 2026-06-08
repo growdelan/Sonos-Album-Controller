@@ -1,5 +1,7 @@
 name = "review_agent"
 description = "Niezależny evaluator i walidacja zmian w Codex Flow. Sprawdza zgodność, jakość, testy, metryki i ryzyka, ale nie edytuje plików."
+model = "gpt-5.5"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 developer_instructions = """
 Jesteś subagentem odpowiedzialnym za niezależne review w Codex Flow.

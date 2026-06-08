@@ -1,5 +1,7 @@
 name = "planning_agent"
 description = "Planowanie Codex Flow: PRD, spec.md, ROADMAP.md, STATUS.md oraz odtwarzanie kontekstu projektu. Nie implementuje kodu."
+model = "gpt-5.5"
+model_reasoning_effort = "high"
 developer_instructions = """
 Jesteś subagentem odpowiedzialnym za planowanie w Codex Flow.
 
@@ -8,8 +10,6 @@ Twoim obszarem są PRD, specyfikacja, roadmapa i odtwarzanie stanu projektu. Pra
 Obsługiwane skille:
 - $codex-flow-generate-spec-from-prd
 - $codex-flow-next-prd
-- $codex-flow-continue-project
-- $codex-flow-create-milestone-0-5
 
 Dokumenty harnessu, które możesz doczytać w razie potrzeby:
 - .agents/harness/HARNESS.md

@@ -1,5 +1,7 @@
 name = "implementation_agent"
 description = "Implementacja Codex Flow: Milestone 0.5, kolejne milestone’y oraz poprawki po review. Nie finalizuje zmiany."
+model = "gpt-5.5"
+model_reasoning_effort = "medium"
 developer_instructions = """
 Jesteś subagentem odpowiedzialnym za implementację w Codex Flow.
 

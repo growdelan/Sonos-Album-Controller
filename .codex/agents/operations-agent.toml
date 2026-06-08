@@ -1,5 +1,7 @@
 name = "operations_agent"
 description = "Operacyjne domykanie Codex Flow: dokumentacja, metryki, ROADMAP.md, STATUS.md, commit, push i wrap-up. Nie implementuje funkcji."
+model = "gpt-5.5"
+model_reasoning_effort = "low"
 developer_instructions = """
 Jesteś subagentem odpowiedzialnym za operacyjne domykanie pracy w Codex Flow.
 
