@@ -81,6 +81,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 | Data | Zakres | Komenda / sposób | Wynik | Uwagi |
 |---|---|---|---|---|
+| 2026-06-09 | Dodanie podglądu aplikacji do README | `git diff -- README.md`; `file img/img.png` | PASS | Zmiana dokumentacyjna: README zawiera podgląd aplikacji przez `img/img.png`; obraz PNG ma rozmiar 2514x2696. Testy runtime pominięte świadomie, bo nie zmieniano kodu aplikacji. |
 | 2026-06-08 | Wrap-up po finalizacji Milestone 16 | `git status --short --branch`; `git log -3 --oneline --decorate`; `rg -n "Milestone 16\|46e5895\|origin/codex/wykrywanie-glosnikow" STATUS.md ROADMAP.md README.md` | PASS | Gałąź `codex/wykrywanie-glosnikow` śledzi `origin/codex/wykrywanie-glosnikow`; commit implementacyjno-operacyjny `46e5895` jest wypchnięty. Wrap-up aktualizuje wyłącznie dokumentację operacyjną. |
 | 2026-06-08 | Finalizacja Milestone 16 | Końcowy self-review; ręczny smoke użytkownika; `uv run python -m unittest discover -s tests -p "test_*.py"`; `uv run python -m py_compile src/sonos_album_controller/*.py`; `git diff --check` | PASS | Self-review zakończony bez problemów krytycznych. Użytkownik potwierdził manualnie, że aplikacja pozwala wybrać głośnik przyciskiem i uruchamia muzykę. Finalne walidacje wykonano bez Node. |
 | 2026-06-08 | Poprawka UX wyboru głośnika po zgłoszeniu użytkownika | `curl -sS http://127.0.0.1:8000/api/speakers`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `uv run python -m py_compile src/sonos_album_controller/*.py`; `git diff --check`; `curl -sS http://127.0.0.1:8000/static/app.js \| rg "needsSpeakerSelection\|renderSpeakerRequiredLibraryState"` | PASS | Backend wykrywał 2 głośniki, ale lista wyboru była schowana w diagnostyce, a biblioteka ładowała stare dane z cache mimo braku aktywnego wyboru. Frontend po poprawce automatycznie pokazuje panel wyboru i nie ładuje biblioteki ani pollingu przed wyborem aktywnego głośnika. 110 testów pełnych PASS. Nie używano Node ani Browser przez Node. |
@@ -172,6 +173,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 | Data | Zakres | Wynik | Problemy krytyczne | Następna akcja |
 |---|---|---|---|---|
+| 2026-06-09 | Self-check zmiany dokumentacyjnej README z podglądem aplikacji | PASS | brak | Commit i push zmian dokumentacyjnych. |
 | 2026-06-08 | Końcowy self-review Milestone 16 po poprawce UX i manualnym smoke | PASS | brak | Finalizacja operacyjna, commit i push. |
 | 2026-06-08 | Manualny smoke Milestone 16 na realnym Sonos | PASS | brak | Użytkownik potwierdził wybór głośnika przyciskiem i start muzyki; można finalizować. |
 | 2026-06-08 | Ponowny self-review Milestone 16 po pierwszych poprawkach | P2/P3 | Brak problemów krytycznych; zwykłe endpointy mogły używać starego IP z zapisanego wyboru bez dopasowania po stabilnym ID po restarcie procesu; pełne Browser/manual smoke pozostawały do finalizacji | Poprawka cache aktywnej konfiguracji wdrożona; wykonać ponowny self-review przed finalizacją. |

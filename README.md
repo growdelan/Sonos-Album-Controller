@@ -2,6 +2,10 @@
 
 Sonos Album Controller — lokalna aplikacja webowa do wygodnego odtwarzania ulubionych albumów z Sonos Favorites na głośniku Sonos Era 300.
 
+## Podgląd aplikacji
+
+![Podgląd aplikacji Sonos Album Controller](img/img.png)
+
 ## Uruchomienie
 
 ```bash
