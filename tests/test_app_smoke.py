@@ -431,6 +431,14 @@ class AppSmokeTest(unittest.TestCase):
         self.assertIn('id="active-speaker-status"', html)
         self.assertIn('id="speakers-list"', html)
         self.assertIn('id="scan-speakers-button"', html)
+        self.assertLess(
+            html.index('id="diagnostics-panel"'),
+            html.index('class="content-surface"'),
+        )
+        self.assertLess(
+            html.index('id="diagnostics-panel"'),
+            html.index('id="albums-panel"'),
+        )
         self.assertIn('id="missing-artist-filter-button"', html)
         self.assertIn('id="cache-status-chip"', html)
         self.assertIn('id="refresh-status-chip"', html)
@@ -458,6 +466,9 @@ class AppSmokeTest(unittest.TestCase):
         self.assertIn("function needsSpeakerSelection", script)
         self.assertIn("function renderSpeakerRequiredLibraryState", script)
         self.assertIn("showDiagnosticsPanel(true);", script)
+        self.assertIn('button.setAttribute("aria-expanded", String(show));', script)
+        self.assertIn('button.classList.toggle("is-active", show);', script)
+        self.assertIn('button.textContent = show ? "Ukryj diagnostyke" : "Diagnostyka";', script)
         self.assertIn("if (needsSpeakerSelection(speakerReport))", script)
         self.assertIn("renderSpeakerRequiredLibraryState(speakerReport);", script)
         self.assertIn("startPlaybackSync();", script)
@@ -499,6 +510,9 @@ class AppSmokeTest(unittest.TestCase):
         self.assertIn(".library-status-chip", styles)
         self.assertIn(".track-playing-indicator", styles)
         self.assertIn("@keyframes track-equalizer", styles)
+        self.assertIn('.ghost-button[aria-expanded="true"]', styles)
+        self.assertIn("diagnostics-panel-enter", styles)
+        self.assertIn("@media (prefers-reduced-motion: reduce)", styles)
         self.assertNotIn("audio-quality-badge", html)
 
 

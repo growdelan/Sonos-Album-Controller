@@ -916,3 +916,70 @@ Uwagi:
 - zakres ocenia się jako duży: zmiana dotyka konfiguracji, lokalnego stanu backendu, diagnostyki, albumów, cache, playbacku, pollingu i statycznego frontendu
 - Decyzja przed implementacją: `SONOS_SPEAKER_IP` wymusza ręczny override zapisanego wyboru i nie zapisuje nowego aktywnego głośnika z discovery.
 - Decyzja przed implementacją: domyślny cache aktywnego głośnika jest rozdzielony per `stable_id`, a `SONOS_CACHE_PATH` zachowuje semantykę dokładnej ścieżki pojedynczego pliku cache zgodności.
+
+---
+
+## Milestone 17: Panel diagnostyki pod headerem (done)
+
+Cel:
+- poprawić widoczność diagnostyki po kliknięciu przycisku `Diagnostyka`
+- przenieść panel diagnostyki wizualnie pod cały header, nad bieżący widok albumów albo szczegółu albumu
+- jasno oznaczyć aktywny stan przycisku `Diagnostyka` bez zmian backendu, API i zawartości panelu
+
+Definition of Done:
+- kliknięcie `Diagnostyka` pokazuje panel bezpośrednio pod headerem i nad aktualną główną treścią
+- panel pojawia się nad listą albumów w widoku biblioteki oraz nad szczegółem albumu w widoku albumu
+- panel nie pojawia się pod siatką albumów i nie wymaga przewijania przez albumy, aby go znaleźć
+- otwarty panel spycha treść niżej, zamiast przykrywać ją jako popover
+- przycisk `Diagnostyka` ma widoczny aktywny styl, gdy panel jest otwarty
+- etykieta przycisku zmienia się na jasny wariant typu `Ukryj diagnostyke` i wraca do `Diagnostyka` po zamknięciu
+- `aria-expanded` odpowiada stanowi panelu, a fokus po otwarciu pozostaje na przycisku
+- stan otwarcia panelu nie jest zapamiętywany po odświeżeniu strony
+- `Test polaczenia` pozostaje osobnym przyciskiem w headerze i działa jak dotychczas
+- zawartość diagnostyki, lista głośników, skanowanie i wybór aktywnego głośnika nie tracą obecnego działania
+- animacja otwarcia jest subtelna i respektuje `prefers-reduced-motion`
+- desktop i mobile nie mają poziomego overflow
+
+Zakres:
+- statyczny frontend HTML/CSS/vanilla JavaScript
+- przeniesienie albo przeorganizowanie położenia istniejącego panelu diagnostyki bez zmiany jego danych i akcji
+- aktywny stan przycisku `Diagnostyka`: styl, etykieta i `aria-expanded`
+- subtelna animacja otwarcia panelu z obsługą ograniczonego ruchu
+- responsywny układ panelu pod headerem na desktopie i mobile
+- testy statyczne frontendu oraz Browser smoke dla położenia panelu i regresji akcji diagnostycznych
+
+Poza zakresem:
+- zmiany backendu i publicznych endpointów API
+- zmiany danych zwracanych przez diagnostykę
+- zmiany logiki discovery, wyboru aktywnego głośnika, cache, albumów, playbacku albo pollingu playera
+- przenoszenie `Test polaczenia` do panelu diagnostyki
+- przebudowa zawartości panelu diagnostyki
+- dodatkowy przycisk zamykania w panelu
+- zamykanie panelem przez Escape jako wymaganie
+- zapamiętywanie stanu otwarcia w `localStorage`, `sessionStorage` albo URL
+- nowe zależności frontendowe, bundler, framework albo biblioteka animacji
+
+Walidacja:
+- `node --check src/sonos_album_controller/static/app.js`
+- `uv run python -m unittest discover -s tests -p "test_*.py"`
+- `git diff --check`
+- test statyczny frontendu dla etykiety przycisku diagnostyki w stanie otwartym i zamkniętym
+- test statyczny frontendu dla aktywnego stylu albo klasy stanu przycisku diagnostyki
+- test statyczny frontendu dla poprawnego `aria-expanded`
+- test DOM albo smoke potwierdzający, że panel diagnostyki znajduje się przed główną treścią biblioteki lub szczegółu albumu, a nie pod siatką albumów
+- regresja dla `Test polaczenia`, skanowania głośników i renderowania listy głośników
+- Browser smoke desktop: otwarcie i zamknięcie diagnostyki, panel pod headerem, panel nad albumami, brak poziomego overflow
+- Browser smoke widoku albumu: panel pod headerem i nad szczegółem albumu bez resetowania widoku
+- Browser smoke mobile: pełnoszeroki panel pod headerem, brak poziomego overflow i brak zasłaniania dolnego playera
+
+Kontrakt sprintu:
+- wymagany przed implementacją: tak
+- najważniejsze walidacje: statyczne testy frontendu, `node --check`, pełne `unittest`, Browser smoke desktop/mobile i regresja akcji diagnostycznych
+- stop conditions: potrzeba zmiany backendu albo API, potrzeba przebudowy zawartości diagnostyki, utrata działania `Test polaczenia` albo wyboru głośnika, brak możliwości utrzymania panelu nad bieżącym widokiem bez szerokiej przebudowy frontendu
+
+Uwagi:
+- milestone zakończony po pozytywnym self-review bez problemów krytycznych, finalnej walidacji automatycznej i Browser smoke desktop/detail/mobile
+- milestone wynika z `prd/008-panel-diagnostyki-pod-headerem.md`
+- zakres ocenia się jako mały: zmiana dotyczy statycznego frontendu i UX diagnostyki
+- nie wymaga osobnego milestone’u redukcji ryzyka
+- nie zmienia statusów wcześniejszych milestone’ów

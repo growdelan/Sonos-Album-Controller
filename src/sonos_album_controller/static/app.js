@@ -1529,6 +1529,8 @@ function showDiagnosticsPanel(show) {
     const button = document.querySelector("#diagnostics-button");
     panel.hidden = !show;
     button.setAttribute("aria-expanded", String(show));
+    button.classList.toggle("is-active", show);
+    button.textContent = show ? "Ukryj diagnostyke" : "Diagnostyka";
 }
 
 function togglePreparedMuteControl() {
