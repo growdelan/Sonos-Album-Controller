@@ -38,6 +38,40 @@
             </div>
         </header>
 
+        <section id="diagnostics-panel" class="diagnostics-panel view-panel" aria-labelledby="diagnostics-title" hidden>
+            <h2 id="diagnostics-title">Diagnostyka</h2>
+            <dl class="diagnostics-grid">
+                <div>
+                    <dt>Aktywny glosnik</dt>
+                    <dd id="diagnostics-active-speaker">-</dd>
+                </div>
+                <div>
+                    <dt>IP glosnika</dt>
+                    <dd id="diagnostics-ip">-</dd>
+                </div>
+                <div>
+                    <dt>Status polaczenia</dt>
+                    <dd id="diagnostics-connection">-</dd>
+                </div>
+                <div>
+                    <dt>Cache</dt>
+                    <dd id="diagnostics-cache">-</dd>
+                </div>
+                <div>
+                    <dt>Ostatni blad</dt>
+                    <dd id="diagnostics-error">-</dd>
+                </div>
+            </dl>
+            <section class="speakers-panel" aria-labelledby="speakers-title">
+                <div class="speakers-heading">
+                    <h3 id="speakers-title">Glosniki Sonos</h3>
+                    <button id="scan-speakers-button" class="secondary-button" type="button">Skanuj</button>
+                </div>
+                <p id="speakers-message" class="panel-message">Ladowanie listy glosnikow...</p>
+                <div id="speakers-list" class="speakers-list" aria-live="polite"></div>
+            </section>
+        </section>
+
         <section class="content-surface" aria-label="Biblioteka muzyczna">
             <section id="albums-panel" class="albums-panel view-panel" aria-labelledby="albums-title">
                 <div class="section-heading library-heading">
@@ -93,39 +127,6 @@
                 </section>
             </section>
 
-            <section id="diagnostics-panel" class="diagnostics-panel view-panel" aria-labelledby="diagnostics-title" hidden>
-                <h2 id="diagnostics-title">Diagnostyka</h2>
-                <dl class="diagnostics-grid">
-                    <div>
-                        <dt>Aktywny glosnik</dt>
-                        <dd id="diagnostics-active-speaker">-</dd>
-                    </div>
-                    <div>
-                        <dt>IP glosnika</dt>
-                        <dd id="diagnostics-ip">-</dd>
-                    </div>
-                    <div>
-                        <dt>Status polaczenia</dt>
-                        <dd id="diagnostics-connection">-</dd>
-                    </div>
-                    <div>
-                        <dt>Cache</dt>
-                        <dd id="diagnostics-cache">-</dd>
-                    </div>
-                    <div>
-                        <dt>Ostatni blad</dt>
-                        <dd id="diagnostics-error">-</dd>
-                    </div>
-                </dl>
-                <section class="speakers-panel" aria-labelledby="speakers-title">
-                    <div class="speakers-heading">
-                        <h3 id="speakers-title">Glosniki Sonos</h3>
-                        <button id="scan-speakers-button" class="secondary-button" type="button">Skanuj</button>
-                    </div>
-                    <p id="speakers-message" class="panel-message">Ladowanie listy glosnikow...</p>
-                    <div id="speakers-list" class="speakers-list" aria-live="polite"></div>
-                </section>
-            </section>
         </section>
     </main>
 

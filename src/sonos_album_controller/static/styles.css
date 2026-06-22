@@ -901,10 +901,25 @@ button:hover {
     color: var(--text-muted);
 }
 
+.ghost-button.is-active,
+.ghost-button[aria-expanded="true"] {
+    background: var(--accent-soft);
+    border-color: rgba(228, 184, 79, 0.52);
+    box-shadow: 0 14px 38px rgba(228, 184, 79, 0.12);
+    color: var(--accent-strong);
+}
+
 .ghost-button:hover {
     background: rgba(255, 255, 255, 0.045);
     border-color: var(--border);
     color: var(--text);
+}
+
+.ghost-button.is-active:hover,
+.ghost-button[aria-expanded="true"]:hover {
+    background: rgba(228, 184, 79, 0.22);
+    border-color: rgba(228, 184, 79, 0.64);
+    color: var(--accent-strong);
 }
 
 .icon-button {
@@ -1011,10 +1026,11 @@ button:hover {
 }
 
 .diagnostics-panel {
+    animation: diagnostics-panel-enter 260ms ease both;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    margin-top: 32px;
+    margin-top: 24px;
     padding: 22px;
 }
 
@@ -1148,6 +1164,18 @@ button:hover {
 
     50% {
         transform: scaleY(1);
+    }
+}
+
+@keyframes diagnostics-panel-enter {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
