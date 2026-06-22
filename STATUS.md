@@ -12,7 +12,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 ## Aktualny milestone / batch
 
 - Aktualny milestone: brak aktywnej implementacji po zakończeniu Milestone 17
-- Status: Milestone 17 zakończony po pozytywnym self-review bez problemów krytycznych, końcowej walidacji automatycznej i Browser smoke
+- Status: Milestone 17 zakończony po pozytywnym self-review bez problemów krytycznych, końcowej walidacji automatycznej, Browser smoke, commicie `260663a` i pushu na `origin/codex/panel-diagnostyki-pod-headerem`
 - Kontrakt sprintu: ustalony przed implementacją; profil `openai_patch`, format patch/diff przez `apply_patch`; model switch: nie
 - Zakres poza Milestone 17: zmiany backendu i API, zmiany danych diagnostyki, zmiany discovery/cache/playbacku/pollingu, przenoszenie `Test polaczenia`, przebudowa zawartości panelu, nowe zależności frontendowe
 
@@ -83,6 +83,7 @@ Ten plik jest pamięcią operacyjną projektu i handoffem między sesjami. Aktua
 
 | Data | Zakres | Komenda / sposób | Wynik | Uwagi |
 |---|---|---|---|---|
+| 2026-06-22 | Wrap-up po finalizacji Milestone 17 | `git status --short --branch`; `git log -3 --oneline --decorate` | PASS | Gałąź `codex/panel-diagnostyki-pod-headerem` śledzi `origin/codex/panel-diagnostyki-pod-headerem`; commit implementacyjno-operacyjny `260663a` jest wypchnięty. Wrap-up aktualizuje wyłącznie dokumentację operacyjną. |
 | 2026-06-22 | Finalizacja Milestone 17 | Self-review; `node --check src/sonos_album_controller/static/app.js`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check` | PASS | Self-review zakończony bez problemów krytycznych. Powtórzona finalna walidacja przeszła: 110 testów pełnych PASS, składnia JS poprawna, diff bez błędów whitespace. |
 | 2026-06-22 | Milestone 17 implementacja lokalna | `node --check src/sonos_album_controller/static/app.js`; `uv run python -m unittest tests.test_app_smoke tests.test_frontend_library`; `uv run python -m unittest discover -s tests -p "test_*.py"`; `git diff --check`; Browser smoke na `http://127.0.0.1:8170` desktop/detail/mobile z tymczasowym cache | PASS | 25 testów zawężonych i 110 testów pełnych PASS. Browser smoke potwierdził panel diagnostyki pod headerem i nad albumami, aktywną etykietę `Ukryj diagnostyke`, `aria-expanded=true`, focus na przycisku, zamykanie toggle’em, panel nad szczegółem albumu bez resetu widoku, mobile 390px bez poziomego overflow i bez zasłaniania dolnego playera. |
 | 2026-06-09 | Dodanie podglądu aplikacji do README | `git diff -- README.md`; `file img/img.png` | PASS | Zmiana dokumentacyjna: README zawiera podgląd aplikacji przez `img/img.png`; obraz PNG ma rozmiar 2514x2696. Testy runtime pominięte świadomie, bo nie zmieniano kodu aplikacji. |
@@ -310,6 +311,7 @@ Kategorie: `InvalidArguments`, `UnexpectedEnvironment`, `ProviderError`, `Timeou
 
 ## Ostatnie aktualizacje
 
+- 2026-06-22: Wrap-up po finalizacji Milestone 17 potwierdził, że gałąź `codex/panel-diagnostyki-pod-headerem` śledzi `origin/codex/panel-diagnostyki-pod-headerem`, a commit implementacyjno-operacyjny `260663a` został wypchnięty.
 - 2026-06-22: Sfinalizowano Milestone 17: panel diagnostyki jest pod headerem i nad bieżącą treścią, przycisk `Diagnostyka` ma aktywny styl, etykietę `Ukryj diagnostyke` i poprawne `aria-expanded`; self-review i finalne walidacje zakończyły się bez problemów krytycznych.
 - 2026-06-22: Dodano `prd/008-panel-diagnostyki-pod-headerem.md`, rozszerzono `spec.md` i `ROADMAP.md` o Milestone 17 oraz zaimplementowano zmianę w statycznym froncie bez zmian backendu/API.
 - 2026-06-08: Wrap-up po finalizacji Milestone 16 potwierdził, że gałąź `codex/wykrywanie-glosnikow` śledzi `origin/codex/wykrywanie-glosnikow`, a commit implementacyjny `46e5895` został wypchnięty.

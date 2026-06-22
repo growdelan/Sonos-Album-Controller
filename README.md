@@ -68,6 +68,8 @@ Endpointy:
 
 Frontend biblioteki działa lokalnie na aktualnej odpowiedzi `/api/albums`: pozwala wyszukiwać albumy po tytule i artyście bez uwzględniania wielkości liter i znaków diakrytycznych, sortować po kolejności z API/Sonosa, tytule albo artyście, zawężać listę filtrem `bez artysty` oraz pokazuje chipy statusu cache i ostatniego odświeżenia. Stan tych kontrolek trwa tylko w bieżącej sesji strony i nie jest zapisywany w URL ani `localStorage`.
 
+Panel diagnostyki otwiera się jako globalny blok bezpośrednio pod headerem, nad listą albumów albo widokiem albumu. Przycisk `Diagnostyka` działa jako toggle, pokazuje aktywny stan, zmienia etykietę na `Ukryj diagnostyke` i nie zapamiętuje otwarcia po odświeżeniu strony.
+
 Player okresowo odpytuje `GET /api/playback/state`, żeby zauważać zmiany wykonane poza aplikacją, np. pauzę, zmianę głośności, mute, tryb pętli albo utwór. Polling zatrzymuje się przy ukrytej karcie, nie odświeża biblioteki albumów ani cache i konserwatywnie podświetla tracklistę tylko przy pewnym dopasowaniu.
 
 Ograniczenie realnej integracji: dla aktualnych Apple Music Favorites testowanych na Sonos Era 300 metoda SoCo `MusicLibrary.browse` zwraca 0 utworów. Aplikacja ma fallback odtworzenia całego albumu przez `AddURIToQueue` z albumowym URI i metadanymi Favorites; po załadowaniu albumu odczytuje tytuły i czasy utworów z kolejki Sonosa.
